@@ -1,5 +1,7 @@
 module Gitlog where
 
+import Control.Applicative
+
 import System.IO          ( hGetContents )
 import System.Process     ( runInteractiveProcess
                           , waitForProcess )
@@ -17,10 +19,19 @@ getGitOutput dir args = do
   path = Just dir
 
 
+range :: String -> String -> [String]
+range f t = [f ++ ".." ++ t]
+
+
+parseArgs :: [String] -> ([String], FilePath)
+parseArgs [from, to, dir] = (range from to, dir)
+parseArgs [from, to]      = (range from to, ".")
+parseArgs [from]          = (range from "HEAD", ".")
+parseArgs _               = ([], ".")
+
+
 main :: IO ()
 main = do
-  [dir, from, to] <- getArgs
-  let range = from ++ ".." ++ to
-  (out, _ec) <- getGitOutput dir ["log", range]
-
+  (args, dir) <- parseArgs <$> getArgs
+  (out, _ec) <- getGitOutput dir ("log" : args)
   putStr out
