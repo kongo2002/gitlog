@@ -2,10 +2,10 @@ module Gitlog where
 
 import Control.Applicative
 
-import System.IO          ( hGetContents )
+import System.IO          ( hGetContents, hPutStrLn, stderr )
 import System.Process     ( runInteractiveProcess
                           , waitForProcess )
-import System.Exit        ( ExitCode(..) )
+import System.Exit        ( ExitCode(..), exitWith )
 import System.Environment ( getArgs )
 
 
@@ -33,5 +33,11 @@ parseArgs _               = ([], ".")
 main :: IO ()
 main = do
   (args, dir) <- parseArgs <$> getArgs
-  (out, _ec) <- getGitOutput dir ("log" : args)
-  putStr out
+  (out, ec)   <- getGitOutput dir (log' args)
+  case ec of
+    ExitSuccess -> putStr out
+    _           -> do
+      hPutStrLn stderr "failed to retrieve git log"
+      exitWith $ ExitFailure 1
+ where
+  log' a = "log" : "--pretty=format:|%h@%s%n%b" : a
