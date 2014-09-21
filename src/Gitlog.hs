@@ -2,12 +2,8 @@
 
 module Main where
 
-import           Prelude hiding     ( takeWhile )
 import           Control.Applicative
 
-import qualified Data.Attoparsec.ByteString.Lazy as AL
-import           Data.Attoparsec.ByteString.Char8
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
 
 import           System.IO          ( hPutStrLn, stderr )
@@ -16,63 +12,24 @@ import           System.Exit        ( ExitCode(..), exitWith )
 import           System.Environment ( getArgs )
 
 import           Gitlog.Encoder
+import           Gitlog.Parser
 import           Gitlog.Types
-
-
-parseInput :: BL.ByteString -> [GitEntry]
-parseInput ls =
-  case AL.parse logentry ls of
-    AL.Fail {}    -> []
-    AL.Done ls' l -> l : parseInput ls'
-
-
-logentries :: Parser [GitEntry]
-logentries =
-  many logentry
-
-
-logentry :: Parser GitEntry
-logentry = do
-  _ <- char '|'
-  sha <- takeWhile (/= '@')
-  _ <- char '@'
-  title <- takeWhile1 $ not . iseof
-  skipWhile iseof
-  b <- sepBy body (takeWhile1 iseof)
-  return $ GitEntry sha title b
-
-
-body :: Parser GitBody
-body =
-  skipWhite *> (intern <|> tag <|> line)
- where
-  intern = string "INTERN" >> skipWhile (not . iseof) *> return Intern
-  tag    = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal
-  line   = do
-    c  <- satisfy (/= '|')
-    cs <- takeWhile (not . iseof)
-    return $ Line (c `BS.cons` cs)
-
-
-skipWhite :: Parser ()
-skipWhite =
-  skipWhile isWhite
- where
-  isWhite c = c == ' ' || c == '\t'
-
-
-iseof :: Char -> Bool
-iseof c = c == '\n' || c == '\r'
 
 
 getGitOutput :: FilePath -> [String] -> IO (BL.ByteString, ExitCode)
 getGitOutput dir args = do
-  (_in, out, _err, handle) <- runInteractiveProcess "git" args path Nothing
-  output <- toHtml . parseInput <$> BL.hGetContents out
-  ec <- waitForProcess handle
+  (_in, out, _err, h) <- runInteractiveProcess "git" args path Nothing
+  output <- proc <$> BL.hGetContents out
+  ec <- waitForProcess h
   return (output, ec)
  where
   path = Just dir
+  proc = toHtml . filter noIntern . parseInput
+
+  intern Intern = True
+  intern _      = False
+
+  noIntern e = not $ any intern $ gBody e
 
 
 range :: String -> String -> [String]
@@ -99,7 +56,7 @@ main = do
     ExitSuccess -> BL.putStr out
     _           -> exit "failed to retrieve git log"
  where
-  log' a = "log" : "--pretty=format:|%h@%s%n%b" : "--no-merges" : a
+  log' a = "log" : "--pretty=format:|%h|%an|%ai|%s%n%b" : "--no-merges" : a
 
 
 -- vim: set et sw=2 sts=2 tw=80:

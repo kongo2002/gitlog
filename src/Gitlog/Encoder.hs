@@ -29,8 +29,16 @@ encodeHtml es =
 entry :: GitEntry -> Builder
 entry e =
   enc "div" "entry" (
-    enc "div" "sha" (
-      byteString $ gSHA e
+    enc "div" "header" (
+      enc "div" "sha" (
+        byteString $ gSHA e
+        ) <>
+      enc "div" "author" (
+        byteString $ gAuthor e
+        ) <>
+      enc "div" "date" (
+        byteString $ gDate e
+        )
       ) <>
     enc "div" "title" (
       byteString $ gTitle e
@@ -58,7 +66,13 @@ header =
 
 css :: Builder
 css =
-  stringUtf8 "<style type=\"text/css\">.entry{padding:5px 10px;float:none;}.sha{float:left;}.title{padding-left:8em;}</style>"
+  stringUtf8 "<style type=\"text/css\">\
+      \.entry{margin:5px 10px;}\
+      \.sha{float:left;}\
+      \.author{float:left;padding-left:5em;}\
+      \.date{float:left;padding-left:5em;}\
+      \.title{clear:both;padding-left:2em;padding-top:0.5em;font-weight:bold;}\
+    \</style>"
 
 
 footer :: Builder
