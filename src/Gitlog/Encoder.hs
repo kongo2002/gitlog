@@ -4,12 +4,14 @@ module Gitlog.Encoder
   ( toHtml
   ) where
 
+import           Prelude hiding ( lines )
+
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Lazy.Builder
-import           Data.Monoid ( Monoid, mappend, mempty )
+import           Data.Monoid    ( Monoid, mappend, mempty )
 
-import Gitlog.Types
+import           Gitlog.Types
 
 
 toHtml :: [GitEntry] -> LBS.ByteString
@@ -44,9 +46,14 @@ entry e =
     enc "div" "title" (
       byteString $ gTitle e
       ) <>
-    enc "div" "body" (foldr lines' mempty $ gBody e) <>
-    enc "div" "tags" (tags $ gBody e))
+    lines body <>
+    enc "div" "tags" (tags body))
  where
+  body = gBody e
+
+  lines [] = mempty
+  lines ls = enc "div" "body" (foldr lines' mempty ls)
+
   lines' (Line l) a = enc "div" "line" (byteString l) <> a
   lines' _        a = a
 
