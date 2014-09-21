@@ -20,7 +20,7 @@ encodeHtml [] = header <> footer
 encodeHtml es =
   header <>
   enc "div" "entries" (
-    foldr go (stringUtf8 mempty) (tail es)) <>
+    foldr go mempty es) <>
   footer
  where
   go x acc = entry x <> acc
@@ -42,8 +42,12 @@ entry e =
       ) <>
     enc "div" "title" (
       byteString $ gTitle e
-      )
-    )
+      ) <>
+    enc "div" "body" ls)
+ where
+  ls = foldr go mempty $ gBody e
+  go (Line l) a = enc "div" "line" (byteString l) <> a
+  go _ a        = a
 
 
 enc :: String -> String -> Builder -> Builder

@@ -17,7 +17,7 @@ import           Gitlog.Types
 
 parseInput :: BL.ByteString -> [GitEntry]
 parseInput ls =
-  case AL.parse logentry ls of
+  case AL.parse (logentry <* skipWhile iseol) ls of
     AL.Fail {}    -> []
     AL.Done ls' l -> l : parseInput ls'
 
@@ -31,9 +31,9 @@ logentry = do
   _ <- char '|'
   date <- takeWhile (/= '|')
   _ <- char '|'
-  title <- takeWhile1 $ not . iseof
-  skipWhile iseof
-  b <- sepBy body (takeWhile1 iseof)
+  title <- takeWhile1 $ not . iseol
+  skipWhile iseol
+  b <- body `sepBy` takeWhile1 iseol
   return $ GitEntry sha author date title b
 
 
@@ -41,11 +41,11 @@ body :: Parser GitBody
 body =
   skipWhite *> (intern <|> tag <|> line)
  where
-  intern = string "INTERN" >> skipWhile (not . iseof) *> return Intern
+  intern = string "INTERN" >> skipWhile (not . iseol) *> return Intern
   tag    = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal
   line   = do
     c  <- satisfy (/= '|')
-    cs <- takeWhile (not . iseof)
+    cs <- takeWhile (not . iseol)
     return $ Line (c `BS.cons` cs)
 
 
@@ -56,8 +56,8 @@ skipWhite =
   isWhite c = c == ' ' || c == '\t'
 
 
-iseof :: Char -> Bool
-iseof c = c == '\n' || c == '\r'
+iseol :: Char -> Bool
+iseol c = c == '\n' || c == '\r'
 
 
 -- vim: set et sw=2 sts=2 tw=80:
