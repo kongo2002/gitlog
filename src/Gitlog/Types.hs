@@ -19,4 +19,19 @@ data GitBody =
   deriving ( Show, Eq, Ord )
 
 
+data Config = Config
+  { cRange :: Maybe (String, String)
+  , cPath  :: FilePath
+  , cDate  :: String
+  } deriving ( Show, Eq, Ord )
+
+
+defaultConfig :: Config
+defaultConfig = Config
+  { cRange = Nothing
+  , cPath  = "."
+  , cDate  = ""
+  }
+
+
 -- vim: set et sw=2 sts=2 tw=80:
