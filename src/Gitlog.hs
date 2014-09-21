@@ -5,6 +5,7 @@ module Main where
 import           Control.Applicative
 
 import qualified Data.ByteString.Lazy as BL
+import           Data.Time.Clock    ( getCurrentTime )
 
 import           System.Console.GetOpt
 import           System.IO          ( hPutStrLn, stderr )
@@ -35,9 +36,10 @@ getGitOutput dir args = do
 
 parseArgs :: [String] -> IO Config
 parseArgs args = do
+  date <- getCurrentTime
   let (actions, noOpt, _err) = getOpt RequireOrder options args
 
-  noopt noOpt <$> foldl (>>=) (return defaultConfig) actions
+  noopt noOpt <$> foldl (>>=) (return $ defaultConfig date) actions
  where
   noopt [f]     opts = opts { cRange = Just (f, "HEAD") }
   noopt (f:t:_) opts = opts { cRange = Just (f, t) }

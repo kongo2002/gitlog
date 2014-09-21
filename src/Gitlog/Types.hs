@@ -1,6 +1,7 @@
 module Gitlog.Types where
 
 import qualified Data.ByteString.Char8 as BS
+import           Data.Time.Clock ( UTCTime )
 
 
 data GitEntry = GitEntry
@@ -22,15 +23,15 @@ data GitBody =
 data Config = Config
   { cRange :: Maybe (String, String)
   , cPath  :: FilePath
-  , cDate  :: String
-  } deriving ( Show, Eq, Ord )
+  , cDate  :: UTCTime
+  } deriving ( Eq, Ord )
 
 
-defaultConfig :: Config
-defaultConfig = Config
+defaultConfig :: UTCTime -> Config
+defaultConfig d = Config
   { cRange = Nothing
   , cPath  = "."
-  , cDate  = ""
+  , cDate  = d
   }
 
 
