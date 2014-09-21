@@ -15,19 +15,8 @@ import           System.Process     ( runInteractiveProcess, waitForProcess )
 import           System.Exit        ( ExitCode(..), exitWith )
 import           System.Environment ( getArgs )
 
-
-data GitEntry = GitEntry
-  { gSHA   :: BS.ByteString
-  , gTitle :: BS.ByteString
-  , gBody  :: [GitBody]
-  } deriving ( Show, Eq, Ord )
-
-
-data GitBody =
-    Intern
-  | Line BS.ByteString
-  | Tag BS.ByteString Int
-  deriving ( Show, Eq, Ord )
+import           Gitlog.Encoder
+import           Gitlog.Types
 
 
 parseInput :: BL.ByteString -> [GitEntry]
@@ -76,10 +65,10 @@ iseof :: Char -> Bool
 iseof c = c == '\n' || c == '\r'
 
 
-getGitOutput :: FilePath -> [String] -> IO ([GitEntry], ExitCode)
+getGitOutput :: FilePath -> [String] -> IO (BL.ByteString, ExitCode)
 getGitOutput dir args = do
   (_in, out, _err, handle) <- runInteractiveProcess "git" args path Nothing
-  output <- parseInput <$> BL.hGetContents out
+  output <- toHtml . parseInput <$> BL.hGetContents out
   ec <- waitForProcess handle
   return (output, ec)
  where
@@ -107,7 +96,7 @@ main = do
   (args, dir) <- parseArgs <$> getArgs
   (out, ec)   <- getGitOutput dir (log' args)
   case ec of
-    ExitSuccess -> print out
+    ExitSuccess -> BL.putStr out
     _           -> exit "failed to retrieve git log"
  where
   log' a = "log" : "--pretty=format:|%h@%s%n%b" : a
