@@ -4,6 +4,7 @@ module Gitlog.Encoder
   ( toHtml
   ) where
 
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Lazy.Builder
 import           Data.Monoid ( Monoid, mappend, mempty )
@@ -43,16 +44,31 @@ entry e =
     enc "div" "title" (
       byteString $ gTitle e
       ) <>
-    enc "div" "body" ls)
+    enc "div" "body" (foldr lines' mempty $ gBody e) <>
+    enc "div" "tags" (tags $ gBody e))
  where
-  ls = foldr go mempty $ gBody e
-  go (Line l) a = enc "div" "line" (byteString l) <> a
-  go _ a        = a
+  lines' (Line l) a = enc "div" "line" (byteString l) <> a
+  lines' _        a = a
+
+  tags [] = mempty
+  tags ts = enc "ul" "tags" $ foldr tags' mempty ts
+
+  tags' (Tag t no) a = enc "li" "tag" (fmt t no) <> a
+  tags' _          a = a
+
+  fmt t no =
+    let tag = BS.unpack t ++ "-" ++ show no
+        url = "http://localhost:9999/browse/" ++ tag
+    in enc' "href" "a" url (stringUtf8 tag)
 
 
 enc :: String -> String -> Builder -> Builder
-enc tag cls builder =
-  charUtf8 '<' <> tag' <> s " class=\"" <> s cls <> s "\">" <>
+enc = enc' "class"
+
+
+enc' :: String -> String -> String -> Builder -> Builder
+enc' attr tag v builder =
+  charUtf8 '<' <> tag' <> charUtf8 ' ' <> s attr <> s "=\"" <> s v <> s "\">" <>
   builder <>
   s "</" <> tag' <> charUtf8 '>'
  where
@@ -76,6 +92,8 @@ css =
       \.author{float:left;padding-left:5em;}\
       \.date{float:left;padding-left:5em;}\
       \.title{clear:both;padding-left:2em;padding-top:0.5em;font-weight:bold;}\
+      \.body{padding-left:2em;padding-top:0.5em;}\
+      \.ul.tags{margin:0;}\
     \</style>"
 
 
