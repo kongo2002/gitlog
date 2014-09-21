@@ -8,7 +8,7 @@ import           Data.Attoparsec.ByteString.Char8
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
 
-import           System.IO          ( hGetContents, hPutStrLn, stderr )
+import           System.IO          ( hPutStrLn, stderr )
 import           System.Process     ( runInteractiveProcess, waitForProcess )
 import           System.Exit        ( ExitCode(..), exitWith )
 import           System.Environment ( getArgs )
@@ -65,11 +65,11 @@ iseof :: Char -> Bool
 iseof c = c == '\n' || c == '\r'
 
 
-getGitOutput :: FilePath -> [String] -> IO (String, ExitCode)
+getGitOutput :: FilePath -> [String] -> IO ([GitEntry], ExitCode)
 getGitOutput dir args = do
   (_in, out, _err, handle) <- runInteractiveProcess "git" args path Nothing
+  output <- parseInput <$> BL.hGetContents out
   ec <- waitForProcess handle
-  output <- hGetContents out
   return (output, ec)
  where
   path = Just dir
@@ -86,14 +86,17 @@ parseArgs [from]          = (range from "HEAD", ".")
 parseArgs _               = ([], ".")
 
 
+exit :: String -> IO ()
+exit msg =
+  hPutStrLn stderr msg >> exitWith (ExitFailure 1)
+
+
 main :: IO ()
 main = do
   (args, dir) <- parseArgs <$> getArgs
   (out, ec)   <- getGitOutput dir (log' args)
   case ec of
-    ExitSuccess -> putStr out
-    _           -> do
-      hPutStrLn stderr "failed to retrieve git log"
-      exitWith $ ExitFailure 1
+    ExitSuccess -> print out
+    _           -> exit "failed to retrieve git log"
  where
   log' a = "log" : "--pretty=format:|%h@%s%n%b" : a
