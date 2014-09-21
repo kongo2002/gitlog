@@ -14,3 +14,6 @@ data GitBody =
   | Line BS.ByteString
   | Tag BS.ByteString Int
   deriving ( Show, Eq, Ord )
+
+
+-- vim: set et sw=2 sts=2 tw=80:

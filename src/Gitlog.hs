@@ -99,4 +99,7 @@ main = do
     ExitSuccess -> BL.putStr out
     _           -> exit "failed to retrieve git log"
  where
-  log' a = "log" : "--pretty=format:|%h@%s%n%b" : a
+  log' a = "log" : "--pretty=format:|%h@%s%n%b" : "--no-merges" : a
+
+
+-- vim: set et sw=2 sts=2 tw=80:
