@@ -7,7 +7,7 @@ license:             Apache-2.0
 license-file:        LICENSE
 author:              Gregor Uhlenheuer
 maintainer:          kongo2002@googlemail.com
--- copyright:
+copyright:           Copyright © 2014 Gregor Uhlenheuer
 -- category:
 build-type:          Simple
 -- extra-source-files:
@@ -15,9 +15,7 @@ cabal-version:       >=1.10
 
 executable gitlog
   main-is:             Gitlog.hs
-  -- other-modules:
-  -- other-extensions:
-  -- hs-source-dirs:
+  hs-source-dirs:      src
   build-depends:       base >= 4.6 && < 4.7,
                        process >= 1.1 && < 1.2,
                        bytestring,
