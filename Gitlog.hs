@@ -1,12 +1,68 @@
-module Gitlog where
+module Main where
 
-import Control.Applicative
+import           Prelude hiding     ( takeWhile )
+import           Control.Applicative
 
-import System.IO          ( hGetContents, hPutStrLn, stderr )
-import System.Process     ( runInteractiveProcess
-                          , waitForProcess )
-import System.Exit        ( ExitCode(..), exitWith )
-import System.Environment ( getArgs )
+import qualified Data.Attoparsec.ByteString.Lazy as AL
+import           Data.Attoparsec.ByteString.Char8
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as BL
+
+import           System.IO          ( hGetContents, hPutStrLn, stderr )
+import           System.Process     ( runInteractiveProcess, waitForProcess )
+import           System.Exit        ( ExitCode(..), exitWith )
+import           System.Environment ( getArgs )
+
+
+data GitEntry = GitEntry
+  { gSHA   :: BS.ByteString
+  , gTitle :: BS.ByteString
+  , gBody  :: [GitBody]
+  } deriving ( Show, Eq, Ord )
+
+
+data GitBody =
+    Line BS.ByteString
+  | Tag BS.ByteString Int
+  deriving ( Show, Eq, Ord )
+
+
+parseInput :: BL.ByteString -> [GitEntry]
+parseInput ls =
+  case AL.parse logentry ls of
+    AL.Fail {}    -> []
+    AL.Done ls' l -> l : parseInput ls'
+
+
+logentries :: Parser [GitEntry]
+logentries =
+  many logentry
+
+
+logentry :: Parser GitEntry
+logentry = do
+  _ <- char '|'
+  sha <- takeWhile (/= '@')
+  _ <- char '@'
+  title <- takeWhile1 $ not . iseof
+  skipWhile iseof
+  b <- sepBy body (takeWhile1 iseof)
+  return $ GitEntry sha title b
+
+
+body :: Parser GitBody
+body =
+  tag <|> line
+ where
+  tag  = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal
+  line = do
+    c  <- satisfy (/= '|')
+    cs <- takeWhile (not . iseof)
+    return $ Line (c `BS.cons` cs)
+
+
+iseof :: Char -> Bool
+iseof c = c == '\n' || c == '\r'
 
 
 getGitOutput :: FilePath -> [String] -> IO (String, ExitCode)
