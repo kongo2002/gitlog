@@ -80,7 +80,7 @@ options =
   , Option "h" ["help"]
     (NoArg
       (\_ -> do
-        let prg = "gitlog [FROM] [TO]"
+        let prg = "gitlog [<from> [<to>]]"
         hPutStrLn stderr (usageInfo prg options)
         exitWith ExitSuccess))
     "show this help"
