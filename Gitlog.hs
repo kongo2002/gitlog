@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import           Prelude hiding     ( takeWhile )
@@ -22,7 +24,8 @@ data GitEntry = GitEntry
 
 
 data GitBody =
-    Line BS.ByteString
+    Intern
+  | Line BS.ByteString
   | Tag BS.ByteString Int
   deriving ( Show, Eq, Ord )
 
@@ -52,13 +55,21 @@ logentry = do
 
 body :: Parser GitBody
 body =
-  tag <|> line
+  skipWhite *> (intern <|> tag <|> line)
  where
-  tag  = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal
-  line = do
+  intern = string "INTERN" >> skipWhile (not . iseof) *> return Intern
+  tag    = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal
+  line   = do
     c  <- satisfy (/= '|')
     cs <- takeWhile (not . iseof)
     return $ Line (c `BS.cons` cs)
+
+
+skipWhite :: Parser ()
+skipWhite =
+  skipWhile isWhite
+ where
+  isWhite c = c == ' ' || c == '\t'
 
 
 iseof :: Char -> Bool
