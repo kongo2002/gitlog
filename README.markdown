@@ -1,6 +1,6 @@
 # gitlog - git log formatter
 
-[![build](https://api.travis-ci.org/kongo2002/gitlog.png)][travis]
+[![build](https://api.travis-ci.org/kongo2002/gitlog.svg)][travis]
 
 
 ## Building
