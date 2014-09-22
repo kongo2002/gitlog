@@ -9,7 +9,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
 import           Data.Time.Clock    ( getCurrentTime )
 
-import           Network.HTTP       ( simpleHTTP, getRequest, rspBody )
+import           Network.HTTP.Conduit
 
 import           System.Console.GetOpt
 import           System.IO          ( hPutStrLn, stderr )
@@ -24,12 +24,12 @@ import           Gitlog.Types
 
 getGitOutput :: Config -> [String] -> IO (BL.ByteString, ExitCode)
 getGitOutput cfg args = do
-  (_in, out, _err, h) <- runInteractiveProcess "git" args path Nothing
+  (_in, out, _err, h) <- runInteractiveProcess "git" args dir Nothing
   output <- BL.hGetContents out >>= parse >>= html
   ec     <- waitForProcess h
   return (output, ec)
  where
-  path = Just $ cPath cfg
+  dir = Just $ cPath cfg
 
   intern Intern = True
   intern _      = False
@@ -50,33 +50,39 @@ populateTags base = mapM go
     case body of
       [] -> return entry
       ls -> do
-        body' <- mapM (populate base) ls
+        body' <- mapM (safeFetch base) ls
         return $ entry { gBody = body' }
    where
     body = gBody entry
 
 
-populate :: String -> GitBody -> IO GitBody
-populate base tag =
-  populate' base tag `catch` ex
+safeFetch :: String -> GitBody -> IO GitBody
+safeFetch base tag =
+  fetch base tag `catch` ex
  where
   ex (SomeException _) = return tag
 
 
-populate' :: String -> GitBody -> IO GitBody
-populate' base t@(Tag ty no _) = do
-  res <- simpleHTTP $ getRequest url
-  case res of
-    (Right r) -> do
-      let body = rspBody r
-      putStr body
-      return $ Tag ty no body
-    _ -> return t
+fetch :: String -> GitBody -> IO GitBody
+fetch base (Tag ty no _) = do
+  mng <- newManager conduitManagerSettings
+  res <- BL.toStrict <$> httpTimeout mng url tout
+  return $ Tag ty no res
  where
   tag = BS.unpack ty ++ "-" ++ show no
   url = base ++ "/browse/" ++ tag
 
-populate' _ x = return x
+  -- timeout in microseconds
+  tout = 1 * 1000 * 1000
+
+fetch _ x = return x
+
+
+httpTimeout :: Manager -> String -> Int -> IO BL.ByteString
+httpTimeout manager url timeout = do
+  req <- parseUrl url
+  let req' = req {responseTimeout = Just timeout}
+  fmap responseBody $ httpLbs req' manager
 
 
 parseArgs :: [String] -> IO Config

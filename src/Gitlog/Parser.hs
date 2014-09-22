@@ -42,7 +42,7 @@ body =
   skipWhite *> (intern <|> tag <|> line)
  where
   intern = string "INTERN" >> skipWhile (not . iseol) *> return Intern
-  tag    = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal <*> return []
+  tag    = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal <*> return BS.empty
   line   = do
     c  <- satisfy (/= '|')
     cs <- takeWhile (not . iseol)
