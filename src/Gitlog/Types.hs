@@ -16,7 +16,7 @@ data GitEntry = GitEntry
 data GitBody =
     Intern
   | Line BS.ByteString
-  | Tag BS.ByteString Int
+  | Tag BS.ByteString Int String
   deriving ( Show, Eq, Ord )
 
 

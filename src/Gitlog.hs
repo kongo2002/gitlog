@@ -3,9 +3,13 @@
 module Main where
 
 import           Control.Applicative
+import           Control.Exception  ( catch, SomeException(..) )
 
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
 import           Data.Time.Clock    ( getCurrentTime )
+
+import           Network.HTTP       ( simpleHTTP, getRequest, rspBody )
 
 import           System.Console.GetOpt
 import           System.IO          ( hPutStrLn, stderr )
@@ -21,17 +25,52 @@ import           Gitlog.Types
 getGitOutput :: FilePath -> [String] -> IO (BL.ByteString, ExitCode)
 getGitOutput dir args = do
   (_in, out, _err, h) <- runInteractiveProcess "git" args path Nothing
-  output <- proc <$> BL.hGetContents out
+  output <- filter noIntern . parseInput <$> BL.hGetContents out
+  output' <- populateTags output
   ec <- waitForProcess h
-  return (output, ec)
+  return (toHtml output', ec)
  where
   path = Just dir
-  proc = toHtml . filter noIntern . parseInput
 
   intern Intern = True
   intern _      = False
 
   noIntern e = not $ any intern $ gBody e
+
+
+populateTags :: [GitEntry] -> IO [GitEntry]
+populateTags = mapM go
+ where
+  go entry =
+    case body of
+      [] -> return entry
+      ls -> do
+        body' <- mapM populate ls
+        return $ entry { gBody = body' }
+   where
+    body = gBody entry
+
+
+populate :: GitBody -> IO GitBody
+populate tag =
+  populate' tag `catch` ex
+ where
+  ex (SomeException _) = return tag
+
+
+populate' :: GitBody -> IO GitBody
+populate' t@(Tag ty no _) = do
+  res <- simpleHTTP $ getRequest url
+  case res of
+    (Right r) -> do
+      let body = rspBody r
+      putStr body
+      return $ Tag ty no body
+    _ -> return t
+ where
+  tag = BS.unpack ty ++ "-" ++ show no
+  url = "http://localhost:9999/browse/" ++ tag
+populate' x = return x
 
 
 parseArgs :: [String] -> IO Config

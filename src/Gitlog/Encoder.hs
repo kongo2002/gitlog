@@ -60,7 +60,7 @@ entry e =
   tags [] = mempty
   tags ts = enc "ul" "tags" $ foldr tags' mempty ts
 
-  tags' (Tag t no) a = enc "li" "tag" (fmt t no) <> a
+  tags' (Tag t no _) a = enc "li" "tag" (fmt t no) <> a
   tags' _          a = a
 
   fmt t no =
@@ -94,11 +94,12 @@ header =
 css :: Builder
 css =
   stringUtf8 "<style type=\"text/css\">\
-      \.entry{margin:5px 10px;}\
+      \.entry{margin:5px 10px 20px 10px;}\
       \.sha{float:left;}\
+      \.header{color:#999;}\
       \.author{float:left;padding-left:5em;}\
       \.date{float:left;padding-left:5em;}\
-      \.title{clear:both;padding-left:2em;padding-top:0.5em;font-weight:bold;}\
+      \.title{clear:both;padding-left:2em;padding-top:0.3em;font-weight:bold;}\
       \.body{padding-left:2em;padding-top:0.5em;}\
       \.ul.tags{margin:0;}\
     \</style>"
