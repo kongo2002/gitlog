@@ -24,6 +24,7 @@ data Config = Config
   { cRange :: Maybe (String, String)
   , cPath  :: FilePath
   , cDate  :: UTCTime
+  , cJira  :: String
   } deriving ( Eq, Ord )
 
 
@@ -32,6 +33,7 @@ defaultConfig d = Config
   { cRange = Nothing
   , cPath  = "."
   , cDate  = d
+  , cJira  = []
   }
 
 

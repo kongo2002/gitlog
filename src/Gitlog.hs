@@ -22,14 +22,14 @@ import           Gitlog.Parser
 import           Gitlog.Types
 
 
-getGitOutput :: FilePath -> [String] -> IO (BL.ByteString, ExitCode)
-getGitOutput dir args = do
+getGitOutput :: Config -> [String] -> IO (BL.ByteString, ExitCode)
+getGitOutput cfg args = do
   (_in, out, _err, h) <- runInteractiveProcess "git" args path Nothing
   output <- BL.hGetContents out >>= parse >>= html
   ec     <- waitForProcess h
   return (output, ec)
  where
-  path = Just dir
+  path = Just $ cPath cfg
 
   intern Intern = True
   intern _      = False
@@ -37,31 +37,34 @@ getGitOutput dir args = do
   noIntern e = not $ any intern $ gBody e
 
   parse  = return . filter noIntern . parseInput
-  html x = toHtml <$> populateTags x
+  html x =
+    case cJira cfg of
+      [] -> return $ toHtml cfg x
+      j  -> toHtml cfg <$> populateTags j x
 
 
-populateTags :: [GitEntry] -> IO [GitEntry]
-populateTags = mapM go
+populateTags :: String -> [GitEntry] -> IO [GitEntry]
+populateTags base = mapM go
  where
   go entry =
     case body of
       [] -> return entry
       ls -> do
-        body' <- mapM populate ls
+        body' <- mapM (populate base) ls
         return $ entry { gBody = body' }
    where
     body = gBody entry
 
 
-populate :: GitBody -> IO GitBody
-populate tag =
-  populate' tag `catch` ex
+populate :: String -> GitBody -> IO GitBody
+populate base tag =
+  populate' base tag `catch` ex
  where
   ex (SomeException _) = return tag
 
 
-populate' :: GitBody -> IO GitBody
-populate' t@(Tag ty no _) = do
+populate' :: String -> GitBody -> IO GitBody
+populate' base t@(Tag ty no _) = do
   res <- simpleHTTP $ getRequest url
   case res of
     (Right r) -> do
@@ -71,8 +74,9 @@ populate' t@(Tag ty no _) = do
     _ -> return t
  where
   tag = BS.unpack ty ++ "-" ++ show no
-  url = "http://localhost:9999/browse/" ++ tag
-populate' x = return x
+  url = base ++ "/browse/" ++ tag
+
+populate' _ x = return x
 
 
 parseArgs :: [String] -> IO Config
@@ -131,7 +135,7 @@ options =
 main :: IO ()
 main = do
   opts      <- parseArgs =<< getArgs
-  (out, ec) <- getGitOutput (cPath opts) (log' (range $ cRange opts))
+  (out, ec) <- getGitOutput opts (log' (range $ cRange opts))
   case ec of
     ExitSuccess -> BL.putStr out
     _           -> exit "failed to retrieve git log"

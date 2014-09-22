@@ -14,23 +14,23 @@ import           Data.Monoid    ( Monoid, mappend, mempty )
 import           Gitlog.Types
 
 
-toHtml :: [GitEntry] -> LBS.ByteString
-toHtml = toLazyByteString . encodeHtml
+toHtml :: Config -> [GitEntry] -> LBS.ByteString
+toHtml c xs = toLazyByteString $ encodeHtml c xs
 
 
-encodeHtml :: [GitEntry] -> Builder
-encodeHtml [] = header <> footer
-encodeHtml es =
+encodeHtml :: Config -> [GitEntry] -> Builder
+encodeHtml _ [] = header <> footer
+encodeHtml c es =
   header <>
   enc "div" "entries" (
     foldr go mempty es) <>
   footer
  where
-  go x acc = entry x <> acc
+  go x acc = entry c x <> acc
 
 
-entry :: GitEntry -> Builder
-entry e =
+entry :: Config -> GitEntry -> Builder
+entry c e =
   enc "div" "entry" (
     enc "div" "header" (
       enc "div" "sha" (
@@ -49,7 +49,9 @@ entry e =
     lines body <>
     enc "div" "tags" (tags body))
  where
-  body = gBody e
+  body   = gBody e
+  jira   = cJira c
+  hasUrl = not $ null jira
 
   lines [] = mempty
   lines ls = enc "div" "body" (foldr lines' mempty ls)
@@ -63,10 +65,12 @@ entry e =
   tags' (Tag t no _) a = enc "li" "tag" (fmt t no) <> a
   tags' _          a = a
 
-  fmt t no =
-    let tag = BS.unpack t ++ "-" ++ show no
-        url = "http://localhost:9999/browse/" ++ tag
-    in enc' "href" "a" url (stringUtf8 tag)
+  fmt t no
+    | hasUrl =
+      let tag = BS.unpack t ++ "-" ++ show no
+          url = jira ++ "/browse/" ++ tag
+      in enc' "href" "a" url (stringUtf8 tag)
+    | otherwise = byteString t <> charUtf8 '-' <> stringUtf8 (show no)
 
 
 enc :: String -> String -> Builder -> Builder
