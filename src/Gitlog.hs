@@ -122,6 +122,12 @@ options =
       "PATH")
     "git directory"
 
+  , Option "j" ["jira"]
+    (ReqArg
+      (\arg opt -> return opt { cJira = arg })
+      "URL")
+    "jira base URL"
+
   , Option "h" ["help"]
     (NoArg
       (\_ -> do
