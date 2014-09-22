@@ -25,10 +25,9 @@ import           Gitlog.Types
 getGitOutput :: FilePath -> [String] -> IO (BL.ByteString, ExitCode)
 getGitOutput dir args = do
   (_in, out, _err, h) <- runInteractiveProcess "git" args path Nothing
-  output <- filter noIntern . parseInput <$> BL.hGetContents out
-  output' <- populateTags output
-  ec <- waitForProcess h
-  return (toHtml output', ec)
+  output <- BL.hGetContents out >>= parse >>= html
+  ec     <- waitForProcess h
+  return (output, ec)
  where
   path = Just dir
 
@@ -36,6 +35,9 @@ getGitOutput dir args = do
   intern _      = False
 
   noIntern e = not $ any intern $ gBody e
+
+  parse  = return . filter noIntern . parseInput
+  html x = toHtml <$> populateTags x
 
 
 populateTags :: [GitEntry] -> IO [GitEntry]
