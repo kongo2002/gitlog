@@ -13,7 +13,8 @@ import           Network.HTTP.Conduit
 
 import           System.Console.GetOpt
 import           System.IO          ( hPutStrLn, stderr )
-import           System.Process
+import           System.Process     ( createProcess, proc, cwd, std_out
+                                    , StdStream(..) )
 import           System.Exit        ( ExitCode(..), exitWith, exitSuccess )
 import           System.Environment ( getArgs )
 
@@ -24,13 +25,13 @@ import           Gitlog.Types
 
 getGitOutput :: Config -> [String] -> IO BL.ByteString
 getGitOutput cfg args = do
-  (_, Just out, _, _) <- createProcess p { cwd = dir
-                                         , std_out = CreatePipe }
+  (_, Just out, _, _) <- createProcess prc { cwd = dir
+                                           , std_out = CreatePipe }
   -- TODO: waitForProcess
   BL.hGetContents out >>= parse >>= html
  where
   dir = Just $ cPath cfg
-  p = proc "git" args
+  prc = proc "git" args
 
   intern Intern = True
   intern _      = False
@@ -147,7 +148,7 @@ options =
 
 main :: IO ()
 main = do
-  opts      <- parseArgs =<< getArgs
+  opts <- parseArgs =<< getArgs
   BL.putStr =<< getGitOutput opts (log' (range $ cRange opts))
  where
   log' a = "log" : "--pretty=format:|%h|%an|%ai|%s%n%b" : "--no-merges" : a
