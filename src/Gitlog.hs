@@ -13,8 +13,8 @@ import           Network.HTTP.Conduit
 
 import           System.Console.GetOpt
 import           System.IO          ( hPutStrLn, stderr )
-import           System.Process     ( runInteractiveProcess, waitForProcess )
-import           System.Exit        ( ExitCode(..), exitWith )
+import           System.Process
+import           System.Exit        ( ExitCode(..), exitWith, exitSuccess )
 import           System.Environment ( getArgs )
 
 import           Gitlog.Encoder
@@ -22,21 +22,22 @@ import           Gitlog.Parser
 import           Gitlog.Types
 
 
-getGitOutput :: Config -> [String] -> IO (BL.ByteString, ExitCode)
+getGitOutput :: Config -> [String] -> IO BL.ByteString
 getGitOutput cfg args = do
-  (_in, out, _err, h) <- runInteractiveProcess "git" args dir Nothing
-  output <- BL.hGetContents out >>= parse >>= html
-  ec     <- waitForProcess h
-  return (output, ec)
+  (_, Just out, _, _) <- createProcess p { cwd = dir
+                                         , std_out = CreatePipe }
+  -- TODO: waitForProcess
+  BL.hGetContents out >>= parse >>= html
  where
   dir = Just $ cPath cfg
+  p = proc "git" args
 
   intern Intern = True
   intern _      = False
 
   noIntern e = not $ any intern $ gBody e
 
-  parse  = return . filter noIntern . parseInput
+  parse = return . filter noIntern . parseInput
   html x =
     case cJira cfg of
       [] -> return $ toHtml cfg x
@@ -82,13 +83,13 @@ httpTimeout :: Manager -> String -> Int -> IO BL.ByteString
 httpTimeout manager url timeout = do
   req <- parseUrl url
   let req' = req {responseTimeout = Just timeout}
-  fmap responseBody $ httpLbs req' manager
+  responseBody <$> httpLbs req' manager
 
 
 parseArgs :: [String] -> IO Config
 parseArgs args = do
   date <- getCurrentTime
-  let (actions, noOpt, _err) = getOpt RequireOrder options args
+  let (actions, noOpt, _err) = getOpt Permute options args
 
   noopt noOpt <$> foldl (>>=) (return $ defaultConfig date) actions
  where
@@ -139,7 +140,7 @@ options =
       (\_ -> do
         let prg = "gitlog [<from> [<to>]]"
         hPutStrLn stderr (usageInfo prg options)
-        exitWith ExitSuccess))
+        exitSuccess))
     "show this help"
   ]
 
@@ -147,10 +148,7 @@ options =
 main :: IO ()
 main = do
   opts      <- parseArgs =<< getArgs
-  (out, ec) <- getGitOutput opts (log' (range $ cRange opts))
-  case ec of
-    ExitSuccess -> BL.putStr out
-    _           -> exit "failed to retrieve git log"
+  BL.putStr =<< getGitOutput opts (log' (range $ cRange opts))
  where
   log' a = "log" : "--pretty=format:|%h|%an|%ai|%s%n%b" : "--no-merges" : a
 

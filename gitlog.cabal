@@ -23,6 +23,6 @@ executable gitlog
                        attoparsec > 0.11 && < 0.13,
                        http-conduit >= 2.1.4 && <= 2.2
 
-  ghc-options:         -O2 -Wall
+  ghc-options:         -O2 -Wall -threaded
   default-language:    Haskell2010
   other-extensions:    OverloadedStrings
