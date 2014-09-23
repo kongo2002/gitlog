@@ -100,7 +100,9 @@ enc' attr tag v builder =
 
 header :: Builder
 header =
-  s "<!DOCTYPE html><html><head><title>gitlog</title>" <>
+  s "<!DOCTYPE html><html><head>\
+      \<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">\
+      \<title>gitlog</title>" <>
   css <>
   s "</head><body>"
 
