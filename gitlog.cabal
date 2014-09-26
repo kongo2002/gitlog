@@ -21,7 +21,9 @@ executable gitlog
                        process >= 1.1 && < 1.2,
                        time,
                        attoparsec > 0.11 && < 0.13,
-                       http-conduit >= 2.1.4 && <= 2.2
+                       http-conduit >= 2.1.4 && <= 2.2,
+                       aeson >= 0.8 && <= 0.9,
+                       text
 
   ghc-options:         -O2 -Wall -threaded
   default-language:    Haskell2010

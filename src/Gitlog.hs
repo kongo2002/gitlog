@@ -5,6 +5,7 @@ module Main where
 import           Control.Applicative
 import           Control.Exception  ( catch, SomeException(..) )
 
+import           Data.Aeson         ( decode )
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
 import           Data.Time.Clock    ( getCurrentTime )
@@ -42,8 +43,8 @@ getGitOutput cfg args = do
   parse = return . filter noIntern . parseInput
   html x =
     if hasJira cfg
-      then return $ toHtml cfg x
-      else toHtml cfg <$> populateTags cfg x
+      then toHtml cfg <$> populateTags cfg x
+      else return $ toHtml cfg x
 
 
 populateTags :: Config -> [GitEntry] -> IO [GitEntry]
@@ -69,12 +70,12 @@ safeFetch cfg tag =
 fetch :: Config -> GitBody -> IO GitBody
 fetch cfg (Tag ty no _) = do
   mng <- newManager conduitManagerSettings
-  res <- BL.toStrict <$> httpTimeout cfg mng url tout
+  res <- decode <$> httpTimeout cfg mng url tout
   return $ Tag ty no res
  where
   tag  = BS.unpack ty ++ "-" ++ show no
   base = cJira cfg
-  url  = base ++ "/browse/" ++ tag
+  url  = base ++ "/rest/api/2/issue/" ++ tag ++ "?fields=summary"
 
   -- timeout in microseconds
   tout = 1 * 1000 * 1000
@@ -88,9 +89,7 @@ httpTimeout cfg manager url timeout = do
   let req' = req {responseTimeout = Just timeout}
   responseBody <$> httpLbs req' manager
  where
-  (Just a) = cAuth cfg
-  user     = BS.pack $ fst a
-  pw       = BS.pack $ snd a
+  (Just (user, pw)) = cAuth cfg
 
 
 parseArgs :: [String] -> IO Config
@@ -157,7 +156,7 @@ options =
  where
   getAuth x =
     case split ':' x of
-      (u:p:_) -> Just (u, p)
+      (u:p:_) -> Just (BS.pack u, BS.pack p)
       _       -> Nothing
   auth a opt =
     case getAuth a of
