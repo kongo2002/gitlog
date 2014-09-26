@@ -2,6 +2,7 @@ module Gitlog.Types where
 
 import qualified Data.ByteString.Char8 as BS
 import           Data.Time.Clock ( UTCTime )
+import           Data.Maybe      ( isJust )
 
 
 data GitEntry = GitEntry
@@ -25,6 +26,7 @@ data Config = Config
   , cPath  :: FilePath
   , cDate  :: UTCTime
   , cJira  :: String
+  , cAuth  :: Maybe (String, String)
   } deriving ( Eq, Ord )
 
 
@@ -34,7 +36,16 @@ defaultConfig d = Config
   , cPath  = "."
   , cDate  = d
   , cJira  = []
+  , cAuth  = Nothing
   }
+
+
+hasJira :: Config -> Bool
+hasJira cfg =
+  null jira || not hasAuth
+ where
+  jira    = cJira cfg
+  hasAuth = isJust $ cAuth cfg
 
 
 -- vim: set et sw=2 sts=2 tw=80:

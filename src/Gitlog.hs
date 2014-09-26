@@ -40,39 +40,40 @@ getGitOutput cfg args = do
 
   parse = return . filter noIntern . parseInput
   html x =
-    case cJira cfg of
-      [] -> return $ toHtml cfg x
-      j  -> toHtml cfg <$> populateTags j x
+    if hasJira cfg
+      then return $ toHtml cfg x
+      else toHtml cfg <$> populateTags cfg x
 
 
-populateTags :: String -> [GitEntry] -> IO [GitEntry]
-populateTags base = mapM go
+populateTags :: Config -> [GitEntry] -> IO [GitEntry]
+populateTags cfg = mapM go
  where
   go entry =
     case body of
       [] -> return entry
       ls -> do
-        body' <- mapM (safeFetch base) ls
+        body' <- mapM (safeFetch cfg) ls
         return $ entry { gBody = body' }
    where
     body = gBody entry
 
 
-safeFetch :: String -> GitBody -> IO GitBody
-safeFetch base tag =
-  fetch base tag `catch` ex
+safeFetch :: Config -> GitBody -> IO GitBody
+safeFetch cfg tag =
+  fetch cfg tag `catch` ex
  where
   ex (SomeException _) = return tag
 
 
-fetch :: String -> GitBody -> IO GitBody
-fetch base (Tag ty no _) = do
+fetch :: Config -> GitBody -> IO GitBody
+fetch cfg (Tag ty no _) = do
   mng <- newManager conduitManagerSettings
-  res <- BL.toStrict <$> httpTimeout mng url tout
+  res <- BL.toStrict <$> httpTimeout cfg mng url tout
   return $ Tag ty no res
  where
-  tag = BS.unpack ty ++ "-" ++ show no
-  url = base ++ "/browse/" ++ tag
+  tag  = BS.unpack ty ++ "-" ++ show no
+  base = cJira cfg
+  url  = base ++ "/browse/" ++ tag
 
   -- timeout in microseconds
   tout = 1 * 1000 * 1000
@@ -80,11 +81,15 @@ fetch base (Tag ty no _) = do
 fetch _ x = return x
 
 
-httpTimeout :: Manager -> String -> Int -> IO BL.ByteString
-httpTimeout manager url timeout = do
-  req <- parseUrl url
+httpTimeout :: Config -> Manager -> String -> Int -> IO BL.ByteString
+httpTimeout cfg manager url timeout = do
+  req <- applyBasicAuth user pw <$> parseUrl url
   let req' = req {responseTimeout = Just timeout}
   responseBody <$> httpLbs req' manager
+ where
+  (Just a) = cAuth cfg
+  user     = BS.pack $ fst a
+  pw       = BS.pack $ snd a
 
 
 parseArgs :: [String] -> IO Config
