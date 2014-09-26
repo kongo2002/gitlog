@@ -42,7 +42,7 @@ defaultConfig d = Config
 
 hasJira :: Config -> Bool
 hasJira cfg =
-  null jira || not hasAuth
+  not (null jira) && hasAuth
  where
   jira    = cJira cfg
   hasAuth = isJust $ cAuth cfg

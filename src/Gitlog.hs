@@ -21,6 +21,7 @@ import           System.Environment ( getArgs )
 import           Gitlog.Encoder
 import           Gitlog.Parser
 import           Gitlog.Types
+import           Gitlog.Utils
 
 
 getGitOutput :: Config -> [String] -> IO BL.ByteString
@@ -141,6 +142,10 @@ options =
       "URL")
     "jira base URL"
 
+  , Option "a" ["auth"]
+    (ReqArg auth "USER:PW")
+    "jira authentication (user:password)"
+
   , Option "h" ["help"]
     (NoArg
       (\_ -> do
@@ -149,6 +154,15 @@ options =
         exitSuccess))
     "show this help"
   ]
+ where
+  getAuth x =
+    case split ':' x of
+      (u:p:_) -> Just (u, p)
+      _       -> Nothing
+  auth a opt =
+    case getAuth a of
+      (Just x) -> return $ opt { cAuth = Just x }
+      _        -> return opt
 
 
 main :: IO ()
