@@ -88,7 +88,7 @@ entry c e =
 
   jiraInfo j =
     case j of
-      (Just (JiraIssue _ summ)) ->
+      (Just (JiraIssue _ summ _)) ->
         charUtf8 ' ' <>
         enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 summ) <> charUtf8 ')')
       Nothing -> mempty

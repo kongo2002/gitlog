@@ -8,6 +8,7 @@ import           Control.Exception  ( catch, SomeException(..) )
 import           Data.Aeson         ( decode )
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
+import           Data.List          ( intercalate )
 import           Data.Time.Clock    ( getCurrentTime )
 
 import           Network.HTTP.Conduit
@@ -75,7 +76,11 @@ fetch cfg (Tag ty no _) = do
  where
   tag  = BS.unpack ty ++ "-" ++ show no
   base = cJira cfg
-  url  = base ++ "/rest/api/2/issue/" ++ tag ++ "?fields=summary"
+  url  = base ++ "/rest/api/2/issue/" ++ tag ++ "?fields=" ++ fields
+  fields = intercalate ","
+    [ "summary"
+    , "customfield_10411"
+    ]
 
   -- timeout in microseconds
   tout = 1 * 1000 * 1000

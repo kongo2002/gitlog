@@ -38,20 +38,28 @@ data Config = Config
 data JiraIssue = JiraIssue
   { jKey     :: Text
   , jSummary :: Text
+  , jToTest  :: Bool
   } deriving ( Eq, Ord, Show )
 
 
 instance FromJSON JiraIssue where
   parseJSON (Object v) = do
-    key    <- v .: "key"
-    fields <- v .: "fields"
-    summ   <- summary fields
-    return $ JiraIssue key summ
+    key     <- v .: "key"
+    fields  <- v .: "fields"
+    (s, tt) <- summary fields
+    return $ JiraIssue key s tt
    where
-    summary (Object x) = x .: "summary"
+    summary (Object x) = do
+      s      <- x .: "summary"
+      custom <- x .: "customfield_10411"
+      tt     <- field custom
+      return (s, tt)
     summary _ = mzero
 
-  parseJSON _          = mzero
+    field (Object _) = return True
+    field _          = return False
+
+  parseJSON _ = mzero
 
 
 defaultConfig :: UTCTime -> Config
