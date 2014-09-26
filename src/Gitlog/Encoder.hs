@@ -4,12 +4,13 @@ module Gitlog.Encoder
   ( toHtml
   ) where
 
-import           Prelude hiding ( lines )
+import           Prelude hiding     ( lines )
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Lazy.Builder
-import           Data.Monoid    ( Monoid, mappend, mempty )
+import           Data.Monoid        ( Monoid, mappend, mempty )
+import           Data.Text.Encoding ( encodeUtf8 )
 
 import           Gitlog.Types
 
@@ -74,15 +75,23 @@ entry c e =
   tags [] = mempty
   tags ts = enc "ul" "tags" $ foldr tags' mempty ts
 
-  tags' (Tag t no _) a = enc "li" "tag" (fmt t no) <> a
+  tags' t@(Tag{}) a = enc "li" "tag" (fmt t) <> a
   tags' _          a = a
 
-  fmt t no
+  fmt (Tag t no ji)
     | hasUrl =
       let tag = BS.unpack t ++ "-" ++ show no
           url = jira ++ "/browse/" ++ tag
-      in enc' "href" "a" url (s tag)
+      in enc' "href" "a" url (s tag) <> jiraInfo ji
     | otherwise = byteString t <> charUtf8 '-' <> s (show no)
+  fmt _ = mempty
+
+  jiraInfo j =
+    case j of
+      (Just (JiraIssue _ summ)) ->
+        charUtf8 ' ' <>
+        enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 summ) <> charUtf8 ')')
+      Nothing -> mempty
 
 
 enc :: String -> String -> Builder -> Builder
