@@ -21,38 +21,37 @@ import           Gitlog.Types
 
 
 getJiraInfo :: Config -> [GitEntry] -> IO [GitEntry]
-getJiraInfo cfg es =
-  runParIO (mapM get =<< mapM go es)
+getJiraInfo cfg es = do
+  mng <- liftIO $ newManager conduitManagerSettings
+  runParIO (mapM get =<< mapM (go mng) es)
  where
-  go :: GitEntry -> ParIO (IVar GitEntry)
-  go tag = do
+  go :: Manager -> GitEntry -> ParIO (IVar GitEntry)
+  go m tag = do
     i <- new
-    fork (do xx <- liftIO (go' tag)
-             put i xx)
+    fork (liftIO (go' m tag) >>= put i)
     return i
 
-  go' :: GitEntry -> IO GitEntry
-  go' entry =
+  go' :: Manager -> GitEntry -> IO GitEntry
+  go' m entry =
     case body of
       [] -> return entry
       ls -> do
-        body' <- mapM (safeFetch cfg) ls
+        body' <- mapM (safeFetch m cfg) ls
         return $ entry { gBody = body' }
    where
     body = gBody entry
 
 
-safeFetch :: Config -> GitBody -> IO GitBody
-safeFetch cfg tag =
-  fetch cfg tag `catch` ex
+safeFetch :: Manager -> Config -> GitBody -> IO GitBody
+safeFetch m cfg tag =
+  fetch m cfg tag `catch` ex
  where
   ex (SomeException _) = return tag
 
 
-fetch :: Config -> GitBody -> IO GitBody
-fetch cfg (Tag ty no _) = do
-  mng <- newManager conduitManagerSettings
-  res <- decode <$> httpTimeout cfg mng url tout
+fetch :: Manager -> Config -> GitBody -> IO GitBody
+fetch m cfg (Tag ty no _) = do
+  res <- decode <$> httpTimeout cfg m url tout
   return $ Tag ty no res
  where
   tag  = BS.unpack ty ++ "-" ++ show no
@@ -66,7 +65,7 @@ fetch cfg (Tag ty no _) = do
   -- timeout in microseconds
   tout = 1 * 1000 * 1000
 
-fetch _ x = return x
+fetch _ _ x = return x
 
 
 httpTimeout :: Config -> Manager -> String -> Int -> IO BL.ByteString
