@@ -3,6 +3,7 @@
 module Gitlog.Types where
 
 import           Control.Monad ( mzero )
+import           Control.Parallel.Strategies
 import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
 import           Data.Time.Clock ( UTCTime )
@@ -17,6 +18,9 @@ data GitEntry = GitEntry
   , gTitle  :: BS.ByteString
   , gBody   :: [GitBody]
   } deriving ( Eq, Ord )
+
+
+instance NFData GitEntry
 
 
 data GitBody =

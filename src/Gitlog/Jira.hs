@@ -6,6 +6,9 @@ module Gitlog.Jira
 
 import           Control.Applicative
 import           Control.Exception ( catch, SomeException(..) )
+import           Control.Monad.Par.IO
+import           Control.Monad.Par.Class
+import           Control.Monad.IO.Class ( liftIO )
 
 import           Data.Aeson        ( decode )
 import qualified Data.ByteString.Lazy as BL
@@ -18,9 +21,18 @@ import           Gitlog.Types
 
 
 getJiraInfo :: Config -> [GitEntry] -> IO [GitEntry]
-getJiraInfo cfg = mapM go
+getJiraInfo cfg es =
+  runParIO (mapM get =<< mapM go es)
  where
-  go entry =
+  go :: GitEntry -> ParIO (IVar GitEntry)
+  go tag = do
+    i <- new
+    fork (do xx <- liftIO (go' tag)
+             put i xx)
+    return i
+
+  go' :: GitEntry -> IO GitEntry
+  go' entry =
     case body of
       [] -> return entry
       ls -> do
