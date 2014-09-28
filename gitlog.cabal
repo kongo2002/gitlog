@@ -22,7 +22,7 @@ executable gitlog
                        time,
                        attoparsec > 0.11 && < 0.13,
                        http-conduit >= 2.1.4 && <= 2.2,
-                       aeson >= 0.8 && <= 0.9,
+                       aeson >= 0.7 && <= 0.9,
                        text
 
   ghc-options:         -O2 -Wall -threaded
