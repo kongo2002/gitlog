@@ -26,20 +26,20 @@ getJiraInfo cfg es = do
   runParIO (mapM get =<< mapM (go mng) es)
  where
   go :: Manager -> GitEntry -> ParIO (IVar GitEntry)
-  go m tag = do
-    i <- new
-    fork (liftIO (go' m tag) >>= put i)
-    return i
+  go m tag =
+    if noBody
+      then newFull tag
+      else do
+        i <- new
+        fork (liftIO (go' m tag) >>= put i)
+        return i
+   where
+    noBody = null $ gBody tag
 
   go' :: Manager -> GitEntry -> IO GitEntry
-  go' m entry =
-    case body of
-      [] -> return entry
-      ls -> do
-        body' <- mapM (safeFetch m cfg) ls
-        return $ entry { gBody = body' }
-   where
-    body = gBody entry
+  go' m entry = do
+    body <- mapM (safeFetch m cfg) (gBody entry)
+    return $ entry { gBody = body }
 
 
 safeFetch :: Manager -> Config -> GitBody -> IO GitBody
