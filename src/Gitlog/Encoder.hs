@@ -131,6 +131,7 @@ css =
       \.title{clear:both;padding-left:2em;padding-top:0.3em;font-weight:bold;}\
       \.body{padding-left:2em;padding-top:0.5em;}\
       \.footnote{font-size:60%;color:#999;border-top:1px solid #999;padding-top:8px;text-align:center;}\
+      \ div.tags{padding-top:0.6em;}\
       \ ul.tags{margin:0;}\
       \ a{text-decoration:none;color:#66d;}\
     \</style>"
