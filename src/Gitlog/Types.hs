@@ -2,13 +2,15 @@
 
 module Gitlog.Types where
 
-import           Control.Monad ( mzero )
+import           Control.Applicative
+import           Control.Monad   ( mzero )
 import           Control.Parallel.Strategies
 import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
 import           Data.Time.Clock ( UTCTime )
-import           Data.Text       ( Text )
 import           Data.Maybe      ( isJust )
+import           Data.Text       ( Text )
+import qualified Data.Vector as V
 
 
 data GitEntry = GitEntry
@@ -40,9 +42,11 @@ data Config = Config
 
 
 data JiraIssue = JiraIssue
-  { jKey     :: Text
-  , jSummary :: Text
-  , jToTest  :: Bool
+  { jKey           :: Text
+  , jSummary       :: Text
+  , jToTest        :: Bool
+  , jDocumentation :: Bool
+  , jPR            :: Bool
   } deriving ( Eq, Ord, Show )
 
 
@@ -50,19 +54,44 @@ instance FromJSON JiraIssue where
   parseJSON (Object v) = do
     key     <- v .: "key"
     fields  <- v .: "fields"
-    (s, tt) <- summary fields
-    return $ JiraIssue key s tt
+    (s, tt, doc, pr) <- summary fields
+    return $ JiraIssue key s tt doc pr
    where
     summary (Object x) = do
-      s      <- x .: "summary"
-      custom <- x .: "customfield_10411"
-      tt     <- field custom
-      return (s, tt)
+      s        <- x .: "summary"
+      -- "to be tested"
+      tt       <- x .: "customfield_10411"
+      tt'      <- exists tt
+      -- "documentation relevant" and "PR relevant"
+      relevant <- x .: "customfield_10412"
+      cs       <- cFields relevant
+      return (s, tt', hasField "10123" cs, hasField "10220" cs)
     summary _ = mzero
 
-    field (Object _) = return True
-    field _          = return False
+    exists Null = return False
+    exists _    = return True
 
+    hasField i = any (\(CustomField _ _ i') -> i == i')
+
+    cFields Null       = return []
+    cFields (Array xs) = mapM parseJSON $ V.toList xs
+    cFields _          = return []
+
+  parseJSON _ = mzero
+
+
+data CustomField = CustomField
+  { cfSelf  :: Text
+  , cfValue :: Text
+  , cfId      :: Text
+  } deriving ( Eq, Ord, Show )
+
+
+instance FromJSON CustomField where
+  parseJSON (Object o) =
+    CustomField <$> o .: "self"
+                <*> o .: "value"
+                <*> o .: "id"
   parseJSON _ = mzero
 
 

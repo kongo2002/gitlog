@@ -17,13 +17,17 @@ import           Data.List         ( intercalate )
 
 import           Network.HTTP.Conduit
 
+import           System.IO          ( hPrint, stderr )
+
 import           Gitlog.Types
 
 
 getJiraInfo :: Config -> [GitEntry] -> IO [GitEntry]
 getJiraInfo cfg es = do
-  mng <- liftIO $ newManager conduitManagerSettings
-  runParIO (mapM get =<< mapM (go mng) es)
+  mng <- liftIO $ newManager (conduitManagerSettings { managerConnCount = 100})
+  res <- runParIO (mapM get =<< mapM (go mng) es)
+  closeManager mng
+  return res
  where
   go :: Manager -> GitEntry -> ParIO (IVar GitEntry)
   go m tag =
@@ -46,12 +50,15 @@ safeFetch :: Manager -> Config -> GitBody -> IO GitBody
 safeFetch m cfg tag =
   fetch m cfg tag `catch` ex
  where
-  ex (SomeException _) = return tag
+  ex (SomeException e) =
+    hPrint stderr e >> return tag
 
 
 fetch :: Manager -> Config -> GitBody -> IO GitBody
 fetch m cfg (Tag ty no _) = do
-  res <- decode <$> httpTimeout cfg m url tout
+  out <- httpTimeout cfg m url
+  let res = decode out
+  hPrint stderr res
   return $ Tag ty no res
  where
   tag  = BS.unpack ty ++ "-" ++ show no
@@ -60,21 +67,22 @@ fetch m cfg (Tag ty no _) = do
   fields = intercalate ","
     [ "summary"
     , "customfield_10411"
+    , "customfield_10412"
     ]
-
-  -- timeout in microseconds
-  tout = 1 * 1000 * 1000
 
 fetch _ _ x = return x
 
 
-httpTimeout :: Config -> Manager -> String -> Int -> IO BL.ByteString
-httpTimeout cfg manager url timeout = do
+httpTimeout :: Config -> Manager -> String -> IO BL.ByteString
+httpTimeout cfg manager url = do
   req <- applyBasicAuth user pw <$> parseUrl url
   let req' = req {responseTimeout = Just timeout}
   responseBody <$> httpLbs req' manager
  where
   (Just (user, pw)) = cAuth cfg
+
+  -- timeout in microseconds (10 seconds)
+  timeout = 10 * 1000 * 1000
 
 
 -- vim: set et sw=2 sts=2 tw=80:

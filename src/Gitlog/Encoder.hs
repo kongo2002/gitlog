@@ -88,9 +88,15 @@ entry c e =
 
   jiraInfo j =
     case j of
-      (Just (JiraIssue _ summ _)) ->
+      (Just (JiraIssue _ sm test doc pr)) ->
         charUtf8 ' ' <>
-        enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 summ) <> charUtf8 ')')
+        enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 sm) <> charUtf8 ')') <>
+        when "test" "to be tested" test <>
+        when "doc" "relevant to documentation" doc <>
+        when "pr" "relevant to PR" pr
+       where
+        when t name cond =
+          if cond then enc "div" t name else mempty
       Nothing -> mempty
 
 
