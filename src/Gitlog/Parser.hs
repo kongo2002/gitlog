@@ -30,10 +30,15 @@ logentry = do
   date   <- topipe
   title  <- takeWhile1 $ not . iseol
   skipWhile iseol
-  b      <- body `sepBy` takeWhile1 iseol
+  b      <- bodies
   return $ GitEntry sha author date title b
  where
   topipe = takeWhile (/= '|') <* char '|'
+
+
+bodies :: Parser [GitBody]
+bodies =
+  body `sepBy` takeWhile1 (inClass "\r\n\t, ")
 
 
 body :: Parser GitBody
