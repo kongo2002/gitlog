@@ -15,10 +15,15 @@ import           Data.Text.Encoding ( encodeUtf8 )
 import           Gitlog.Types
 
 
+------------------------------------------------------------------------------
+-- | Convert a list of @GitEntry@ into a lazy bytestring representing
+-- the HTML output
 toHtml :: Config -> [GitEntry] -> LBS.ByteString
 toHtml c xs = toLazyByteString $ encodeHtml c xs
 
 
+------------------------------------------------------------------------------
+-- | Encode HTML output using a @Builder@
 encodeHtml :: Config -> [GitEntry] -> Builder
 encodeHtml _ [] = header <> footer
 encodeHtml c es =
@@ -45,6 +50,8 @@ encodeHtml c es =
           s "revisions from " <> commit f <> s " to " <> commit t)
 
 
+------------------------------------------------------------------------------
+-- | HTML output for one @GitEntry@
 entry :: Config -> GitEntry -> Builder
 entry c e =
   enc "div" "entry" (
@@ -100,10 +107,14 @@ entry c e =
       Nothing -> mempty
 
 
+------------------------------------------------------------------------------
+-- | Enclosing tag helper function for 'class' tags
 enc :: String -> String -> Builder -> Builder
 enc = enc' "class"
 
 
+------------------------------------------------------------------------------
+-- | Enclosing tag helper function
 enc' :: String -> String -> String -> Builder -> Builder
 enc' attr tag v builder =
   charUtf8 '<' <> tag' <> charUtf8 ' ' <> s attr <> s "=\"" <> s v <> s "\">" <>
@@ -113,6 +124,8 @@ enc' attr tag v builder =
   tag' = s tag
 
 
+------------------------------------------------------------------------------
+-- | HTML header
 header :: Builder
 header =
   s "<!DOCTYPE html><html><head>\
@@ -122,6 +135,8 @@ header =
   s "</head><body>"
 
 
+------------------------------------------------------------------------------
+-- | Default CSS definitions
 css :: Builder
 css =
   s "<style type=\"text/css\">\
@@ -144,6 +159,8 @@ css =
     \</style>"
 
 
+------------------------------------------------------------------------------
+-- | HTML footer
 footer :: Builder
 footer = s "</body></html>"
 

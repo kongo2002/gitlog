@@ -22,6 +22,8 @@ import           Gitlog.Types
 import           Gitlog.Utils
 
 
+------------------------------------------------------------------------------
+-- | Shell out git process, parse the results and encode the output
 getGitOutput :: Config -> [String] -> IO BL.ByteString
 getGitOutput cfg args = do
   (_, Just out, _, _) <- createProcess prc { cwd = dir
@@ -44,6 +46,8 @@ getGitOutput cfg args = do
       else return $ toHtml cfg x
 
 
+------------------------------------------------------------------------------
+-- | Parse command line arguments
 parseArgs :: [String] -> IO Config
 parseArgs args = do
   date <- getCurrentTime
@@ -56,11 +60,15 @@ parseArgs args = do
   noopt _       opts = opts
 
 
+------------------------------------------------------------------------------
+-- | Exit with a stderr error message
 exit :: String -> IO ()
 exit msg =
   hPutStrLn stderr msg >> exitWith (ExitFailure 1)
 
 
+------------------------------------------------------------------------------
+-- | Command line argument description
 options :: [ OptDescr (Config -> IO Config) ]
 options =
   [ Option "f" ["from"]
@@ -113,6 +121,8 @@ options =
       _       -> return opt
 
 
+------------------------------------------------------------------------------
+-- | Main application entry point
 main :: IO ()
 main = do
   opts <- parseArgs =<< getArgs

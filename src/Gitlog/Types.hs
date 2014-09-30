@@ -20,6 +20,8 @@ import           Data.Text       ( Text )
 import qualified Data.Vector as V
 
 
+------------------------------------------------------------------------------
+-- | Record describing one git commit
 data GitEntry = GitEntry
   { gSHA    :: BS.ByteString
   , gAuthor :: BS.ByteString
@@ -32,6 +34,8 @@ data GitEntry = GitEntry
 instance NFData GitEntry
 
 
+------------------------------------------------------------------------------
+-- | Git commit message body
 data GitBody =
     Intern
   | Line BS.ByteString
@@ -39,15 +43,9 @@ data GitBody =
   deriving ( Eq, Ord )
 
 
-data Config = Config
-  { cRange :: Maybe (String, String)
-  , cPath  :: FilePath
-  , cDate  :: UTCTime
-  , cJira  :: String
-  , cAuth  :: Maybe (BS.ByteString, BS.ByteString)
-  } deriving ( Eq, Ord, Show )
-
-
+------------------------------------------------------------------------------
+-- | Record containing the additional JIRA information
+-- of a specific issue
 data JiraIssue = JiraIssue
   { jKey           :: Text
   , jSummary       :: Text
@@ -84,6 +82,9 @@ instance FromJSON JiraIssue where
   parseJSON _ = mzero
 
 
+------------------------------------------------------------------------------
+-- | Internal structure to hold the JSON information
+-- of a JIRA custom field definition
 data CustomField = CI
   { _id    :: Text
   , _self  :: Text
@@ -99,6 +100,19 @@ instance FromJSON CustomField where
   parseJSON _ = mzero
 
 
+------------------------------------------------------------------------------
+-- | Record holding the application configuration
+data Config = Config
+  { cRange :: Maybe (String, String)
+  , cPath  :: FilePath
+  , cDate  :: UTCTime
+  , cJira  :: String
+  , cAuth  :: Maybe (BS.ByteString, BS.ByteString)
+  } deriving ( Eq, Ord, Show )
+
+
+------------------------------------------------------------------------------
+-- | Default application configuration
 defaultConfig :: UTCTime -> Config
 defaultConfig d = Config
   { cRange = Nothing
@@ -109,6 +123,9 @@ defaultConfig d = Config
   }
 
 
+------------------------------------------------------------------------------
+-- | Does the configuration contain valid JIRA
+-- information/credentials?
 hasJira :: Config -> Bool
 hasJira cfg =
   not (null jira) && hasAuth

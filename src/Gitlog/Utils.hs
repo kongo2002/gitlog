@@ -3,6 +3,8 @@ module Gitlog.Utils
   ) where
 
 
+------------------------------------------------------------------------------
+-- | Split a string on a specific character
 split :: Char -> String -> [String]
 split c str =
   case dropWhile predicate str of

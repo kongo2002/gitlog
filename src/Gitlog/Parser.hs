@@ -15,6 +15,8 @@ import qualified Data.ByteString.Lazy as BL
 import           Gitlog.Types
 
 
+------------------------------------------------------------------------------
+-- | Parse a list of @GitEntry@ of the given lazy bytestring
 parseInput :: BL.ByteString -> [GitEntry]
 parseInput ls =
   case AL.parse (logentry <* skipWhile iseol) ls of
@@ -22,6 +24,8 @@ parseInput ls =
     AL.Done ls' l -> l : parseInput ls'
 
 
+------------------------------------------------------------------------------
+-- | Parse one commit into a @GitEntry@
 logentry :: Parser GitEntry
 logentry = do
   _      <- char '|'
@@ -36,11 +40,15 @@ logentry = do
   topipe = takeWhile (/= '|') <* char '|'
 
 
+------------------------------------------------------------------------------
+-- | Parse commit message
 bodies :: Parser [GitBody]
 bodies =
   body `sepBy` takeWhile1 (inClass "\r\n\t, ")
 
 
+------------------------------------------------------------------------------
+-- | Parse the commit message body. One of @Intern@, @Tag@, @Line@
 body :: Parser GitBody
 body =
   skipWhite *> (intern <|> tag <|> line)
@@ -53,6 +61,8 @@ body =
     return $ Line (c `BS.cons` cs)
 
 
+------------------------------------------------------------------------------
+-- | Skip whitespace
 skipWhite :: Parser ()
 skipWhite =
   skipWhile isWhite
@@ -60,6 +70,8 @@ skipWhite =
   isWhite c = c == ' ' || c == '\t'
 
 
+------------------------------------------------------------------------------
+-- | Match the end of line
 iseol :: Char -> Bool
 iseol c = c == '\n' || c == '\r'
 

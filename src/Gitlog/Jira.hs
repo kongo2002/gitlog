@@ -22,6 +22,9 @@ import           System.IO          ( hPrint, stderr )
 import           Gitlog.Types
 
 
+------------------------------------------------------------------------------
+-- | Fetch all available JIRA information for the given list of
+-- @GitEntry@. The HTTP requests are fired concurrently.
 getJiraInfo :: Config -> [GitEntry] -> IO [GitEntry]
 getJiraInfo cfg es = do
   mng <- liftIO $ newManager settings
@@ -48,6 +51,8 @@ getJiraInfo cfg es = do
   settings = conduitManagerSettings { managerConnCount = 100 }
 
 
+------------------------------------------------------------------------------
+-- | Safe HTTP request against the JIRA API
 safeFetch :: Manager -> Config -> GitBody -> IO GitBody
 safeFetch m cfg tag =
   fetch m cfg tag `catch` ex
@@ -56,6 +61,8 @@ safeFetch m cfg tag =
     hPrint stderr e >> return tag
 
 
+------------------------------------------------------------------------------
+-- | Fetch the desired information of the JIRA API
 fetch :: Manager -> Config -> GitBody -> IO GitBody
 fetch m cfg (Tag ty no _) = do
   out <- httpTimeout cfg m url
@@ -74,6 +81,8 @@ fetch m cfg (Tag ty no _) = do
 fetch _ _ x = return x
 
 
+------------------------------------------------------------------------------
+-- | HTTP request using a specific timeout
 httpTimeout :: Config -> Manager -> String -> IO BL.ByteString
 httpTimeout cfg manager url = do
   req <- applyBasicAuth user pw <$> parseUrl url
