@@ -91,9 +91,9 @@ entry c e =
       (Just (JiraIssue _ sm test doc pr)) ->
         charUtf8 ' ' <>
         enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 sm) <> charUtf8 ')') <>
-        when "relevant test" "to be tested" test <>
-        when "relevant doc" "relevant to documentation" doc <>
-        when "relevant pr" "relevant to PR" pr
+        when "relevant test" (s "to be tested") test <>
+        when "relevant doc" (s "relevant to documentation") doc <>
+        when "relevant pr" (s "relevant to PR") pr
        where
         when t name cond =
           if cond then enc "div" t name else mempty
