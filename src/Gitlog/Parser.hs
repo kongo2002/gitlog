@@ -24,17 +24,16 @@ parseInput ls =
 
 logentry :: Parser GitEntry
 logentry = do
-  _ <- char '|'
-  sha <- takeWhile (/= '|')
-  _ <- char '|'
-  author <- takeWhile (/= '|')
-  _ <- char '|'
-  date <- takeWhile (/= '|')
-  _ <- char '|'
-  title <- takeWhile1 $ not . iseol
+  _      <- char '|'
+  sha    <- topipe
+  author <- topipe
+  date   <- topipe
+  title  <- takeWhile1 $ not . iseol
   skipWhile iseol
-  b <- body `sepBy` takeWhile1 iseol
+  b      <- body `sepBy` takeWhile1 iseol
   return $ GitEntry sha author date title b
+ where
+  topipe = takeWhile (/= '|') <* char '|'
 
 
 body :: Parser GitBody
