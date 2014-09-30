@@ -106,14 +106,11 @@ options =
     "show this help"
   ]
  where
-  getAuth x =
+  auth x opt =
     case split ':' x of
-      (u:p:_) -> Just (BS.pack u, BS.pack p)
-      _       -> Nothing
-  auth a opt =
-    case getAuth a of
-      (Just x) -> return $ opt { cAuth = Just x }
-      _        -> return opt
+      (u:p:_) -> let a = Just (BS.pack u, BS.pack p)
+                 in return $ opt { cAuth = a }
+      _       -> return opt
 
 
 main :: IO ()
