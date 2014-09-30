@@ -91,9 +91,9 @@ entry c e =
       (Just (JiraIssue _ sm test doc pr)) ->
         charUtf8 ' ' <>
         enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 sm) <> charUtf8 ')') <>
-        when "test" "to be tested" test <>
-        when "doc" "relevant to documentation" doc <>
-        when "pr" "relevant to PR" pr
+        when "relevant test" "to be tested" test <>
+        when "relevant doc" "relevant to documentation" doc <>
+        when "relevant pr" "relevant to PR" pr
        where
         when t name cond =
           if cond then enc "div" t name else mempty
@@ -137,6 +137,7 @@ css =
       \.title{clear:both;padding-left:2em;padding-top:0.3em;font-weight:bold;}\
       \.body{padding-left:2em;padding-top:0.5em;}\
       \.footnote{font-size:60%;color:#999;border-top:1px solid #999;padding-top:8px;text-align:center;}\
+      \.relevant{font-size:80%;padding:0.2em 0.5em;color:#a22;}\
       \ div.tags{padding-top:0.6em;}\
       \ ul.tags{margin:0;}\
       \ a{text-decoration:none;color:#66d;}\

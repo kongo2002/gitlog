@@ -58,7 +58,6 @@ fetch :: Manager -> Config -> GitBody -> IO GitBody
 fetch m cfg (Tag ty no _) = do
   out <- httpTimeout cfg m url
   let res = decode out
-  hPrint stderr res
   return $ Tag ty no res
  where
   tag  = BS.unpack ty ++ "-" ++ show no
