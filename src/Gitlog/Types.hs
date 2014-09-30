@@ -1,6 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Gitlog.Types where
+module Gitlog.Types
+  ( GitEntry(..)
+  , GitBody(..)
+  , Config(..)
+  , JiraIssue(..)
+  , defaultConfig
+  , hasJira
+  ) where
 
 import           Control.Applicative
 import           Control.Monad   ( mzero )
@@ -58,40 +65,37 @@ instance FromJSON JiraIssue where
     return $ JiraIssue key s tt doc pr
    where
     summary (Object x) = do
-      s        <- x .: "summary"
+      s  <- x .: "summary"
       -- "to be tested"
-      tt       <- x .: "customfield_10411"
-      tt'      <- exists tt
+      tt <- exists =<< (x .: "customfield_10411")
       -- "documentation relevant" and "PR relevant"
-      relevant <- x .: "customfield_10412"
-      cs       <- cFields relevant
-      return (s, tt', hasField "10123" cs, hasField "10220" cs)
+      cs <- toList =<< (x .: "customfield_10412")
+      return (s, tt, hasField "10123" cs, hasField "10220" cs)
     summary _ = mzero
 
     exists Null = return False
     exists _    = return True
 
-    hasField i = any (\(CustomField _ _ i') -> i == i')
+    hasField i = any ((== i) . _id)
 
-    cFields Null       = return []
-    cFields (Array xs) = mapM parseJSON $ V.toList xs
-    cFields _          = return []
+    toList (Array xs) = mapM parseJSON $ V.toList xs
+    toList _          = return []
 
   parseJSON _ = mzero
 
 
-data CustomField = CustomField
-  { cfSelf  :: Text
-  , cfValue :: Text
-  , cfId      :: Text
-  } deriving ( Eq, Ord, Show )
+data CustomField = CI
+  { _id    :: Text
+  , _self  :: Text
+  , _value :: Text
+  }
 
 
 instance FromJSON CustomField where
   parseJSON (Object o) =
-    CustomField <$> o .: "self"
-                <*> o .: "value"
-                <*> o .: "id"
+    CI <$> o .: "id"
+       <*> o .: "self"
+       <*> o .: "value"
   parseJSON _ = mzero
 
 

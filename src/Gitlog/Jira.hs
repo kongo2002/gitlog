@@ -24,7 +24,7 @@ import           Gitlog.Types
 
 getJiraInfo :: Config -> [GitEntry] -> IO [GitEntry]
 getJiraInfo cfg es = do
-  mng <- liftIO $ newManager (conduitManagerSettings { managerConnCount = 100})
+  mng <- liftIO $ newManager settings
   res <- runParIO (mapM get =<< mapM (go mng) es)
   closeManager mng
   return res
@@ -44,6 +44,8 @@ getJiraInfo cfg es = do
   go' m entry = do
     body <- mapM (safeFetch m cfg) (gBody entry)
     return $ entry { gBody = body }
+
+  settings = conduitManagerSettings { managerConnCount = 100 }
 
 
 safeFetch :: Manager -> Config -> GitBody -> IO GitBody
