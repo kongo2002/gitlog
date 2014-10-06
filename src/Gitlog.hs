@@ -37,9 +37,14 @@ getGitOutput cfg args = do
   intern Intern = True
   intern _      = False
 
-  noIntern e = not $ any intern $ gBody e
+  relevant e = noIntern e && noRevert e
 
-  parse = return . filter noIntern . parseInput
+  noIntern e = not $ any intern $ gBody e
+  noRevert e =
+    let title = BS.unpack $ gTitle e
+    in not $ startsWith "Revert" title
+
+  parse = return . filter relevant . parseInput
   html x =
     if hasJira cfg
       then toHtml cfg <$> getJiraInfo cfg x
