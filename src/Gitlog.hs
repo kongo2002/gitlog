@@ -23,13 +23,13 @@ import           Gitlog.Utils
 
 
 ------------------------------------------------------------------------------
--- | Shell out git process, parse the results and encode the output
-getGitOutput :: Config -> [String] -> IO BL.ByteString
-getGitOutput cfg args = do
+-- | Shell out git process and parse the results into a list of @GitEntry@
+getGitEntries :: Config -> [String] -> IO [GitEntry]
+getGitEntries cfg args = do
   (_, Just out, _, _) <- createProcess prc { cwd = dir
                                            , std_out = CreatePipe }
   -- TODO: waitForProcess
-  BL.hGetContents out >>= parse >>= html
+  BL.hGetContents out >>= parse
  where
   dir = Just $ cPath cfg
   prc = proc "git" args
@@ -45,10 +45,15 @@ getGitOutput cfg args = do
     in not $ startsWith "Revert" title
 
   parse = return . filter relevant . parseInput
-  html x =
-    if hasJira cfg
-      then toHtml cfg <$> getJiraInfo cfg x
-      else return $ toHtml cfg x
+
+
+------------------------------------------------------------------------------
+-- | Convert the given list of @GitEntry@ into a lazy bytestring output
+getOutput :: Config -> [GitEntry] -> IO BL.ByteString
+getOutput cfg entries =
+  if hasJira cfg
+    then toHtml cfg <$> getJiraInfo cfg entries
+    else return $ toHtml cfg entries
 
 
 ------------------------------------------------------------------------------
@@ -131,7 +136,7 @@ options =
 main :: IO ()
 main = do
   opts <- parseArgs =<< getArgs
-  BL.putStr =<< getGitOutput opts (log' (range $ cRange opts))
+  BL.putStr =<< getOutput opts =<< getGitEntries opts (log' (range $ cRange opts))
  where
   log' a = "log" : "--pretty=format:|%h|%an|%ai|%s%n%b" : "--no-merges" : a
 
