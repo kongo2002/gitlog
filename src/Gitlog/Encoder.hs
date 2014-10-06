@@ -9,6 +9,7 @@ import           Prelude hiding     ( lines )
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Lazy.Builder
+import           Data.List          ( nub )
 import           Data.Monoid        ( Monoid, mappend, mempty )
 import           Data.Text.Encoding ( encodeUtf8 )
 
@@ -80,7 +81,7 @@ entry c e =
   lines' _        a = a
 
   tags [] = mempty
-  tags ts = enc "ul" "tags" $ foldr tags' mempty ts
+  tags ts = enc "ul" "tags" $ foldr tags' mempty (nub ts)
 
   tags' t@(Tag{}) a = enc "li" "tag" (fmt t) <> a
   tags' _          a = a

@@ -28,7 +28,7 @@ data GitEntry = GitEntry
   , gDate   :: BS.ByteString
   , gTitle  :: BS.ByteString
   , gBody   :: [GitBody]
-  } deriving ( Eq, Ord )
+  } deriving ( Eq, Ord, Show )
 
 
 instance NFData GitEntry
@@ -37,10 +37,17 @@ instance NFData GitEntry
 ------------------------------------------------------------------------------
 -- | Git commit message body
 data GitBody =
-    Intern
+    Tag BS.ByteString Int (Maybe JiraIssue)
   | Line BS.ByteString
-  | Tag BS.ByteString Int (Maybe JiraIssue)
-  deriving ( Eq, Ord )
+  | Intern
+  deriving ( Ord, Show )
+
+
+instance Eq GitBody where
+  Intern      == Intern      = True
+  (Line as)   == (Line bs)   = as == bs
+  (Tag a x _) == (Tag b y _) = a == b && x == y
+  _           == _           = False
 
 
 ------------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import           Control.Applicative
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
+import           Data.List          ( groupBy, intercalate )
 import           Data.Time.Clock    ( getCurrentTime )
 
 import           System.Console.GetOpt
@@ -52,8 +53,31 @@ getGitEntries cfg args = do
 getOutput :: Config -> [GitEntry] -> IO BL.ByteString
 getOutput cfg entries =
   if hasJira cfg
-    then toHtml cfg <$> getJiraInfo cfg entries
+    then toHtml cfg <$> withJira entries
     else return $ toHtml cfg entries
+ where
+  withJira x =
+    groupIssues <$> getJiraInfo cfg x
+
+  sameJira a b =
+    any (`elem` b_tags) a_tags
+   where
+    onlyTags = filter isTag
+    a_tags   = onlyTags $ gBody a
+    b_tags   = onlyTags $ gBody b
+
+  groupIssues = map select . groupBy sameJira
+   where
+    select []       = error "captain! we've been hit"
+    select xs@(x:_) =
+      let sep = [Line ""]
+          body = intercalate sep $ map gBody xs
+      in  x { gBody = body }
+
+
+isTag :: GitBody -> Bool
+isTag Tag{} = True
+isTag _     = False
 
 
 ------------------------------------------------------------------------------
