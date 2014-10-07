@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
@@ -12,7 +13,7 @@ import           Data.Time.Clock    ( getCurrentTime )
 import           System.Console.GetOpt
 import           System.IO          ( hPutStrLn, stderr )
 import           System.Process     ( createProcess, proc, cwd, std_out
-                                    , StdStream(..) )
+                                    , StdStream(..), waitForProcess )
 import           System.Exit        ( ExitCode(..), exitWith, exitSuccess )
 import           System.Environment ( getArgs )
 
@@ -25,12 +26,15 @@ import           Gitlog.Utils
 
 ------------------------------------------------------------------------------
 -- | Shell out git process and parse the results into a list of @GitEntry@
-getGitEntries :: Config -> [String] -> IO [GitEntry]
+getGitEntries :: Config -> [String] -> IO (ExitCode, [GitEntry])
 getGitEntries cfg args = do
-  (_, Just out, _, _) <- createProcess prc { cwd = dir
+  (_, Just out, _, h) <- createProcess prc { cwd = dir
                                            , std_out = CreatePipe }
-  -- TODO: waitForProcess
-  BL.hGetContents out >>= parse
+  -- force evaluation of process output
+  -- otherwise 'waitForOutput' would block endlessly
+  !result <- parse <$> BL.hGetContents out
+  ec <- waitForProcess h
+  return (ec, result)
  where
   dir = Just $ cPath cfg
   prc = proc "git" args
@@ -45,7 +49,10 @@ getGitEntries cfg args = do
     let title = BS.unpack $ gTitle e
     in not $ startsWith "Revert" title
 
-  parse = return . filter relevant . parseInput
+  parse x =
+    let res = filter relevant $ parseInput x
+        len = length res
+    in  len `seq` res
 
 
 ------------------------------------------------------------------------------
@@ -160,9 +167,12 @@ options =
 main :: IO ()
 main = do
   opts <- parseArgs =<< getArgs
-  BL.putStr =<< getOutput opts =<< getGitEntries opts (log' (range $ cRange opts))
+  (ec, result) <-  getGitEntries opts (log' (range $ cRange opts))
+  case ec of
+    ExitSuccess -> getOutput opts result >>= BL.putStr
+    _           -> exitWith ec
  where
-  log' a = "log" : "--pretty=format:|%h|%an|%ai|%s%n%b" : "--no-merges" : a
+  log' a = "--no-pager" : "log" : "--pretty=format:|%h|%an|%ai|%s%n%b" : "--no-merges" : a
 
   range Nothing       = []
   range (Just (f, t)) = [f ++ ".." ++ t]
