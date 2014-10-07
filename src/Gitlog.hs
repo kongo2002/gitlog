@@ -9,7 +9,7 @@ import           Control.Applicative
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
-import           Data.List          ( groupBy, intercalate )
+import           Data.List          ( groupBy, nub, find, sortBy )
 import           Data.Time.Clock    ( getCurrentTime )
 
 import           System.Console.GetOpt
@@ -60,13 +60,18 @@ getGitEntries cfg args = do
 ------------------------------------------------------------------------------
 -- | Convert the given list of @GitEntry@ into a lazy bytestring output
 getOutput :: Config -> [GitEntry] -> IO BL.ByteString
-getOutput cfg entries =
-  if hasJira cfg
-    then toHtml cfg <$> withJira entries
-    else return $ toHtml cfg entries
+getOutput cfg entries
+  | hasJira cfg = toHtml cfg . groupIssues <$> getJiraInfo cfg entries
+  | otherwise   = return $ toHtml cfg entries
  where
-  withJira x =
-    groupIssues <$> getJiraInfo cfg x
+  tags a b =
+    case (firstTag a, firstTag b) of
+      (Just t1, Just t2) -> compare t2 t1
+      (Just _, _)        -> LT
+      (_, Just _)        -> GT
+      _                  -> compare (gDate a) (gDate b)
+
+  firstTag = find isTag . gBody
 
   sameJira a b =
     any (`elem` b_tags) a_tags
@@ -75,13 +80,13 @@ getOutput cfg entries =
     a_tags   = onlyTags $ gBody a
     b_tags   = onlyTags $ gBody b
 
-  groupIssues = map select . groupBy sameJira
+  groupIssues = map select . groupBy sameJira . sortBy tags
    where
-    select []       = error "captain! we've been hit"
-    select xs@(x:_) =
-      let sep = [Line ""]
-          body = intercalate sep $ map gBody xs
-      in  x { gBody = body }
+    select []           = error "captain! we've been hit"
+    select [x]          = x
+    select xs@(first:_) =
+      let body = nub $ filter isTag $ concatMap gBody xs
+      in  first { gBody = body }
 
 
 isTag :: GitBody -> Bool
