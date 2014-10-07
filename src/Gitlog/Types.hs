@@ -31,9 +31,6 @@ data GitEntry = GitEntry
   } deriving ( Eq, Ord, Show )
 
 
-instance NFData GitEntry
-
-
 ------------------------------------------------------------------------------
 -- | Git commit message body
 data GitBody =
@@ -41,6 +38,9 @@ data GitBody =
   | Line BS.ByteString
   | Intern
   deriving ( Ord, Show )
+
+
+instance NFData GitBody
 
 
 instance Eq GitBody where
@@ -60,6 +60,9 @@ data JiraIssue = JiraIssue
   , jDocumentation :: Bool
   , jPR            :: Bool
   } deriving ( Eq, Ord, Show )
+
+
+instance NFData JiraIssue
 
 
 instance FromJSON JiraIssue where

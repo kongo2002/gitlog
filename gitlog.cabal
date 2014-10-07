@@ -18,6 +18,7 @@ executable gitlog
   hs-source-dirs:      src
   build-depends:       base >= 4.6 && < 4.7,
                        bytestring,
+                       containers,
                        text,
                        time,
                        transformers,

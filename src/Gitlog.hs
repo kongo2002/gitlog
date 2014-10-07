@@ -61,7 +61,7 @@ getGitEntries cfg args = do
 -- | Convert the given list of @GitEntry@ into a lazy bytestring output
 getOutput :: Config -> [GitEntry] -> IO BL.ByteString
 getOutput cfg entries
-  | hasJira cfg = toHtml cfg . groupIssues <$> getJiraInfo cfg entries
+  | hasJira cfg = toHtml cfg . groupIssues <$> getJira cfg entries
   | otherwise   = return $ toHtml cfg entries
  where
   tags a b =

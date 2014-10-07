@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Gitlog.Jira
-  ( getJiraInfo
+  ( getJira
   ) where
 
 import           Control.Applicative
@@ -13,61 +13,84 @@ import           Control.Monad.IO.Class ( liftIO )
 import           Data.Aeson        ( decode )
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as BS
-import           Data.List         ( intercalate )
+import           Data.List         ( intercalate, nub )
+import qualified Data.Map.Strict as M
+import           Data.Maybe        ( mapMaybe )
 
 import           Network.HTTP.Conduit
 
-import           System.IO          ( hPrint, stderr )
+import           System.IO         ( hPrint, stderr )
 
 import           Gitlog.Types
 
 
 ------------------------------------------------------------------------------
+-- | Retrieve all JIRA information for the given list of @GitEntry@
+getJira :: Config -> [GitEntry] -> IO [GitEntry]
+getJira cfg es = do
+  issueMap <- M.fromList . mapMaybe issuesOnly <$> getJiraInfo cfg issues
+
+  return $ map (getIssues issueMap) es
+ where
+  issues =
+    nub $ foldr tag [] $ concatMap gBody es
+   where
+    tag x@Tag{} a = x:a
+    tag _ a       = a
+
+  issuesOnly (x, Just j) = Just (x, j)
+  issuesOnly _           = Nothing
+
+  getIssues m entry
+    | null body = entry
+    | otherwise = entry { gBody = map (getIssue m) body }
+   where
+    body = gBody entry
+
+  getIssue m tag@(Tag t no _) = Tag t no (M.lookup tag m)
+  getIssue _ x                = x
+
+
+------------------------------------------------------------------------------
 -- | Fetch all available JIRA information for the given list of
--- @GitEntry@. The HTTP requests are fired concurrently.
-getJiraInfo :: Config -> [GitEntry] -> IO [GitEntry]
+-- @GitBody@. The HTTP requests are fired concurrently.
+getJiraInfo :: Config -> [GitBody] -> IO [(GitBody, Maybe JiraIssue)]
 getJiraInfo cfg es = do
   mng <- liftIO $ newManager settings
   res <- runParIO (mapM get =<< mapM (go mng) es)
   closeManager mng
   return res
  where
-  go :: Manager -> GitEntry -> ParIO (IVar GitEntry)
-  go m tag =
-    if noBody
-      then newFull tag
-      else do
-        i <- new
-        fork (liftIO (go' m tag) >>= put i)
-        return i
-   where
-    noBody = null $ gBody tag
+  go :: Manager -> GitBody -> ParIO (IVar (GitBody, Maybe JiraIssue))
+  go m tag = do
+    i <- new
+    fork (liftIO (go' m tag) >>= put i)
+    return i
 
-  go' :: Manager -> GitEntry -> IO GitEntry
-  go' m entry = do
-    body <- mapM (safeFetch m cfg) (gBody entry)
-    return $ entry { gBody = body }
+  go' :: Manager -> GitBody -> IO (GitBody, Maybe JiraIssue)
+  go' m body = do
+    jira <- safeFetch m cfg body
+    return (body, jira)
 
   settings = conduitManagerSettings { managerConnCount = 100 }
 
 
 ------------------------------------------------------------------------------
 -- | Safe HTTP request against the JIRA API
-safeFetch :: Manager -> Config -> GitBody -> IO GitBody
+safeFetch :: Manager -> Config -> GitBody -> IO (Maybe JiraIssue)
 safeFetch m cfg tag =
   fetch m cfg tag `catch` ex
  where
   ex (SomeException e) =
-    hPrint stderr e >> return tag
+    hPrint stderr e >> return Nothing
 
 
 ------------------------------------------------------------------------------
 -- | Fetch the desired information of the JIRA API
-fetch :: Manager -> Config -> GitBody -> IO GitBody
+fetch :: Manager -> Config -> GitBody -> IO (Maybe JiraIssue)
 fetch m cfg (Tag ty no _) = do
   out <- httpTimeout cfg m url
-  let res = decode out
-  return $ Tag ty no res
+  return $ decode out
  where
   tag  = BS.unpack ty ++ "-" ++ show no
   base = cJira cfg
@@ -78,7 +101,7 @@ fetch m cfg (Tag ty no _) = do
     , "customfield_10412"
     ]
 
-fetch _ _ x = return x
+fetch _ _ _ = return Nothing
 
 
 ------------------------------------------------------------------------------
