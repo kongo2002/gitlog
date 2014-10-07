@@ -1,7 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Main
+  ( main
+  ) where
 
 import           Control.Applicative
 
@@ -99,13 +101,6 @@ parseArgs args = do
   noopt [f]     opts = opts { cRange = Just (f, "HEAD") }
   noopt (f:t:_) opts = opts { cRange = Just (f, t) }
   noopt _       opts = opts
-
-
-------------------------------------------------------------------------------
--- | Exit with a stderr error message
-exit :: String -> IO ()
-exit msg =
-  hPutStrLn stderr msg >> exitWith (ExitFailure 1)
 
 
 ------------------------------------------------------------------------------
