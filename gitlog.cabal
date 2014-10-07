@@ -16,7 +16,7 @@ cabal-version:       >=1.10
 executable gitlog
   main-is:             Gitlog.hs
   hs-source-dirs:      src
-  build-depends:       base >= 4.6 && < 4.7,
+  build-depends:       base >= 4.6 && < 4.8,
                        bytestring,
                        containers,
                        text,
