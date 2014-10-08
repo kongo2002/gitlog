@@ -66,8 +66,8 @@ entry c e =
     enc "div" "title" (
       byteString $ gTitle e
       ) <>
-    lines body <>
-    enc "div" "tags" (tags body))
+    enc "div" "tags" (tags body) <>
+    lines body)
  where
   body   = gBody e
   jira   = cJira c
@@ -153,7 +153,7 @@ css =
       \.body{padding-left:2em;padding-top:0.5em;}\
       \.footnote{font-size:60%;color:#999;border-top:1px solid #999;padding-top:8px;text-align:center;}\
       \.relevant{font-size:80%;padding:0.2em 0.5em;color:#a22;}\
-      \ div.tags{padding-top:0.6em;}\
+      \ div.tags{padding:0.6em 0;}\
       \ ul.tags{margin:0;}\
       \ a{text-decoration:none;color:#66d;}\
     \</style>"
