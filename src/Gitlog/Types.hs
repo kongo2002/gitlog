@@ -17,9 +17,13 @@ import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
 import           Data.Time.Clock ( UTCTime )
 import           Data.Maybe      ( isJust )
-import           Data.Text       ( Text )
+import           Data.Monoid     ( mempty )
+import           Data.Text       ( Text, pack )
 import           Data.Text.Encoding ( decodeUtf8 )
+import           Data.Text.Lazy.Builder
 import qualified Data.Vector as V
+
+import           Gitlog.Utils
 
 
 ------------------------------------------------------------------------------
@@ -36,12 +40,22 @@ data GitEntry = GitEntry
 instance ToJSON GitEntry where
   toJSON e =
     object
-      [ "commit" .= decodeUtf8 (gSHA e)
-      , "author" .= decodeUtf8 (gAuthor e)
-      , "date"   .= decodeUtf8 (gDate e)
-      , "title"  .= decodeUtf8 (gTitle e)
-      {- , "body"   .= gBody e -}
+      [ "commit"   .= decodeUtf8 (gSHA e)
+      , "author"   .= decodeUtf8 (gAuthor e)
+      , "date"     .= decodeUtf8 (gDate e)
+      , "title"    .= decodeUtf8 (gTitle e)
+      , "body"     .= object
+        [ "text"   .= toLazyText text
+        , "tags"   .= tags
+        , "intern" .= intern
+        ]
       ]
+   where
+    (text, tags, intern) = foldr go (mempty, [], False) $ gBody e
+
+    go (Line x)    (ls, ts, i) = (fromText (decodeUtf8 x) <> "\n" <> ls, ts, i)
+    go (Tag t x _) (ls, ts, i) = (ls, pack (BS.unpack t ++ "-" ++ show x) : ts, i)
+    go Intern      (ls, ts, _) = (ls, ts, True)
 
 
 ------------------------------------------------------------------------------

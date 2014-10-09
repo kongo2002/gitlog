@@ -9,10 +9,11 @@ import           Prelude hiding     ( lines )
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Lazy.Builder
-import           Data.Monoid        ( Monoid, mappend, mempty )
+import           Data.Monoid        ( mempty )
 import           Data.Text.Encoding ( encodeUtf8 )
 
 import           Gitlog.Types
+import           Gitlog.Utils
 
 
 ------------------------------------------------------------------------------
@@ -163,12 +164,6 @@ css =
 -- | HTML footer
 footer :: Builder
 footer = s "</body></html>"
-
-
-infixr 4 <>
-(<>) :: Monoid m => m -> m -> m
-(<>) = mappend
-{-# INLINE (<>) #-}
 
 
 s :: String -> Builder

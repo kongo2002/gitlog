@@ -1,9 +1,11 @@
 module Gitlog.Utils
   ( split
   , startsWith
+  , (<>)
   ) where
 
-import Data.List ( stripPrefix )
+import Data.Monoid ( Monoid, mappend )
+import Data.List   ( stripPrefix )
 
 
 ------------------------------------------------------------------------------
@@ -25,6 +27,12 @@ startsWith prefix input =
   case stripPrefix prefix input of
     (Just _) -> True
     _        -> False
+
+
+infixr 4 <>
+(<>) :: Monoid m => m -> m -> m
+(<>) = mappend
+{-# INLINE (<>) #-}
 
 
 -- vim: set et sw=2 sts=2 tw=80:
