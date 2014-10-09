@@ -5,6 +5,7 @@ module Gitlog.Types
   , GitBody(..)
   , Config(..)
   , JiraIssue(..)
+  , OutputFormat(..)
   , defaultConfig
   , hasJira
   ) where
@@ -17,6 +18,7 @@ import qualified Data.ByteString.Char8 as BS
 import           Data.Time.Clock ( UTCTime )
 import           Data.Maybe      ( isJust )
 import           Data.Text       ( Text )
+import           Data.Text.Encoding ( decodeUtf8 )
 import qualified Data.Vector as V
 
 
@@ -29,6 +31,17 @@ data GitEntry = GitEntry
   , gTitle  :: BS.ByteString
   , gBody   :: [GitBody]
   } deriving ( Eq, Ord, Show )
+
+
+instance ToJSON GitEntry where
+  toJSON e =
+    object
+      [ "commit" .= decodeUtf8 (gSHA e)
+      , "author" .= decodeUtf8 (gAuthor e)
+      , "date"   .= decodeUtf8 (gDate e)
+      , "title"  .= decodeUtf8 (gTitle e)
+      {- , "body"   .= gBody e -}
+      ]
 
 
 ------------------------------------------------------------------------------
@@ -111,25 +124,35 @@ instance FromJSON CustomField where
 
 
 ------------------------------------------------------------------------------
+-- | Output format used in encoding
+data OutputFormat =
+    Html
+  | Json
+  deriving ( Eq, Show )
+
+
+------------------------------------------------------------------------------
 -- | Record holding the application configuration
 data Config = Config
-  { cRange :: Maybe (String, String)
-  , cPath  :: FilePath
-  , cDate  :: UTCTime
-  , cJira  :: String
-  , cAuth  :: Maybe (BS.ByteString, BS.ByteString)
-  } deriving ( Eq, Ord, Show )
+  { cRange  :: Maybe (String, String)
+  , cPath   :: FilePath
+  , cDate   :: UTCTime
+  , cJira   :: String
+  , cAuth   :: Maybe (BS.ByteString, BS.ByteString)
+  , cOutput :: OutputFormat
+  } deriving ( Eq, Show )
 
 
 ------------------------------------------------------------------------------
 -- | Default application configuration
 defaultConfig :: UTCTime -> Config
 defaultConfig d = Config
-  { cRange = Nothing
-  , cPath  = "."
-  , cDate  = d
-  , cJira  = []
-  , cAuth  = Nothing
+  { cRange  = Nothing
+  , cPath   = "."
+  , cDate   = d
+  , cJira   = []
+  , cAuth   = Nothing
+  , cOutput = Html
   }
 
 

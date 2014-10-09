@@ -61,8 +61,8 @@ getGitEntries cfg args = do
 -- | Convert the given list of @GitEntry@ into a lazy bytestring output
 getOutput :: Config -> [GitEntry] -> IO BL.ByteString
 getOutput cfg entries
-  | hasJira cfg = toHtml cfg . groupIssues <$> getJira cfg entries
-  | otherwise   = return $ toHtml cfg entries
+  | hasJira cfg = encode cfg . groupIssues <$> getJira cfg entries
+  | otherwise   = return $ encode cfg entries
  where
   tags a b =
     case (firstTag a, firstTag b) of
@@ -136,6 +136,10 @@ options =
       "PATH")
     "git directory"
 
+  , Option [] ["format"]
+    (ReqArg format "FORMAT")
+    "output format (either html or json)"
+
   , Option "j" ["jira"]
     (ReqArg
       (\arg opt -> return opt { cJira = arg })
@@ -149,7 +153,7 @@ options =
   , Option "h" ["help"]
     (NoArg
       (\_ -> do
-        let prg = "gitlog [<from> [<to>]]"
+        let prg = "gitlog [<from> [<to>]]\n"
         hPutStrLn stderr (usageInfo prg options)
         exitSuccess))
     "show this help"
@@ -158,8 +162,14 @@ options =
   auth x opt =
     case split ':' x of
       (u:p:_) -> let a = Just (BS.pack u, BS.pack p)
-                 in return $ opt { cAuth = a }
+                 in return opt { cAuth = a }
       _       -> return opt
+
+  format x opt =
+    case x of
+      "json" -> return opt { cOutput = Json }
+      "html" -> return opt { cOutput = Html }
+      _      -> return opt
 
 
 ------------------------------------------------------------------------------
