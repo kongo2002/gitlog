@@ -35,9 +35,15 @@ logentry = do
   title  <- takeWhile1 $ not . iseol
   skipWhile iseol
   b      <- bodies
-  return $ GitEntry sha author date title b
+  return $ GitEntry sha author date title (titleTag title b)
  where
   topipe = takeWhile (/= '|') <* char '|'
+
+  -- check if the title starts with a tag definition
+  titleTag t b =
+    case parseOnly tag t of
+      Right tag' -> tag' : b
+      Left _     -> b
 
 
 ------------------------------------------------------------------------------
@@ -54,11 +60,17 @@ body =
   skipWhite *> (intern <|> tag <|> line)
  where
   intern = string "INTERN" >> skipWhile (not . iseol) *> return Intern
-  tag    = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal <*> return Nothing
   line   = do
     c  <- satisfy (/= '|')
     cs <- takeWhile (not . iseol)
     return $ Line (c `BS.cons` cs)
+
+
+------------------------------------------------------------------------------
+-- | Try to parse a tag definition of the form 'TAG-123'
+tag :: Parser GitBody
+tag = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal
+          <*> return Nothing
 
 
 ------------------------------------------------------------------------------
