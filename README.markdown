@@ -52,7 +52,7 @@ In order for **gitlog** to be able to retrieve further information on the
 respective [JIRA][jira] issues you have to pass the base URL to the [JIRA][jira]
 web service and the *basic auth* credentials like this:
 
-    $ gitlog -j https://jira.some.server/ -a user:pw dev origin/master
+    $ gitlog -j https://jira.some.server/ -a user:pw origin/master dev
 
 
 [travis]: https://travis-ci.org/kongo2002/gitlog/
