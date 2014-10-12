@@ -55,9 +55,19 @@ instance ToJSON GitEntry where
    where
     (text, tags, intern) = foldr go (mempty, [], False) $ gBody e
 
-    go (Line x)    (ls, ts, i) = (fromText (decodeUtf8 x) <> "\n" <> ls, ts, i)
-    go (Tag t x _) (ls, ts, i) = (ls, T.pack (BS.unpack t ++ "-" ++ show x) : ts, i)
-    go Intern      (ls, ts, _) = (ls, ts, True)
+    -- group body lines into one text entry
+    -- and aggregate all tag entries
+    go (Line x) (ls, ts, i) = (fromText (decodeUtf8 x) <> "\n" <> ls, ts, i)
+    go t@Tag{}  (ls, ts, i) = (ls, tag t : ts, i)
+    go Intern   (ls, ts, _) = (ls, ts, True)
+
+    tag (Tag t x jira) =
+      case jira of
+        (Just j) -> object ["name" .= name, "jira" .= j]
+        Nothing  -> object ["name" .= name]
+     where
+      name = T.pack (BS.unpack t ++ "-" ++ show x)
+    tag _ = Null
 
     nonEmpty k v
       | TL.null v = Nothing
@@ -126,6 +136,17 @@ instance FromJSON JiraIssue where
     toList _          = return []
 
   parseJSON _ = mzero
+
+
+instance ToJSON JiraIssue where
+  toJSON (JiraIssue k s tt d pr) =
+    object
+     [ "key" .= k
+     , "summary" .= s
+     , "toTest" .= tt
+     , "documentation" .= d
+     , "pr" .= pr
+     ]
 
 
 ------------------------------------------------------------------------------
