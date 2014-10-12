@@ -11,14 +11,16 @@ module Gitlog.Types
   ) where
 
 import           Control.Applicative
-import           Control.Monad   ( mzero )
+import           Control.Monad      ( mzero )
 import           Control.Parallel.Strategies
 import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
-import           Data.Time.Clock ( UTCTime )
-import           Data.Maybe      ( isJust )
-import           Data.Monoid     ( mempty )
-import           Data.Text       ( Text, pack )
+import           Data.Time.Clock    ( UTCTime )
+import           Data.Maybe         ( isJust, catMaybes )
+import           Data.Monoid        ( mempty )
+import           Data.Text          ( Text )
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import           Data.Text.Encoding ( decodeUtf8 )
 import           Data.Text.Lazy.Builder
 import qualified Data.Vector as V
@@ -44,18 +46,25 @@ instance ToJSON GitEntry where
       , "author"   .= decodeUtf8 (gAuthor e)
       , "date"     .= decodeUtf8 (gDate e)
       , "title"    .= decodeUtf8 (gTitle e)
-      , "body"     .= object
-        [ "text"   .= toLazyText text
-        , "tags"   .= tags
-        , "intern" .= intern
-        ]
+      , "body"     .= object (catMaybes
+        [ nonEmpty "text" (toLazyText text)
+        , nonNull "tags" tags
+        , Just ("intern" .= intern)
+        ])
       ]
    where
     (text, tags, intern) = foldr go (mempty, [], False) $ gBody e
 
     go (Line x)    (ls, ts, i) = (fromText (decodeUtf8 x) <> "\n" <> ls, ts, i)
-    go (Tag t x _) (ls, ts, i) = (ls, pack (BS.unpack t ++ "-" ++ show x) : ts, i)
+    go (Tag t x _) (ls, ts, i) = (ls, T.pack (BS.unpack t ++ "-" ++ show x) : ts, i)
     go Intern      (ls, ts, _) = (ls, ts, True)
+
+    nonEmpty k v
+      | TL.null v = Nothing
+      | otherwise = Just (k .= v)
+
+    nonNull _ [] = Nothing
+    nonNull k vs = Just (k .= vs)
 
 
 ------------------------------------------------------------------------------
