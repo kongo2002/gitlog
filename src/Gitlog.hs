@@ -9,6 +9,7 @@ import           Control.Applicative
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.List          ( groupBy, nub, find, sortBy )
 import           Data.Time.Clock    ( getCurrentTime )
 
@@ -61,9 +62,11 @@ getGitEntries cfg args = do
 -- | Convert the given list of @GitEntry@ into a lazy bytestring output
 getOutput :: Config -> [GitEntry] -> IO BL.ByteString
 getOutput cfg entries
+  | debug       = return $ LBS.pack $ show entries
   | hasJira cfg = encode cfg . groupIssues <$> getJira cfg entries
   | otherwise   = return $ encode cfg entries
  where
+  debug = cDebug cfg
   tags a b =
     case (firstTag a, firstTag b) of
       (Just t1, Just t2) -> compare t2 t1
@@ -150,6 +153,10 @@ options =
     (ReqArg auth "USER:PW")
     "jira authentication (user:password)"
 
+  , Option [] ["debug"]
+    (NoArg (\o -> return o { cDebug = True}))
+    "enable debug output"
+
   , Option "h" ["help"]
     (NoArg
       (\_ -> do
@@ -177,7 +184,7 @@ options =
 main :: IO ()
 main = do
   opts <- parseArgs =<< getArgs
-  (ec, result) <-  getGitEntries opts (log' (range $ cRange opts))
+  (ec, result) <- getGitEntries opts (log' (range $ cRange opts))
   case ec of
     ExitSuccess -> getOutput opts result >>= BL.putStr
     _           -> exitWith ec

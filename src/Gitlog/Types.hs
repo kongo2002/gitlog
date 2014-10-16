@@ -184,6 +184,7 @@ data Config = Config
   , cJira   :: String
   , cAuth   :: Maybe (BS.ByteString, BS.ByteString)
   , cOutput :: OutputFormat
+  , cDebug  :: Bool
   } deriving ( Eq, Show )
 
 
@@ -197,6 +198,7 @@ defaultConfig d = Config
   , cJira   = []
   , cAuth   = Nothing
   , cOutput = Html
+  , cDebug  = False
   }
 
 
