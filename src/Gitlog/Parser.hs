@@ -50,7 +50,11 @@ logentry = do
 -- | Parse commit message
 bodies :: Parser [GitBody]
 bodies =
-  body `sepBy` takeWhile1 (inClass "\r\n\t, ")
+  body `sepBy` takeWhile1 (inClass bodySep)
+
+
+bodySep :: String
+bodySep = "\r\n\t, "
 
 
 ------------------------------------------------------------------------------
@@ -59,7 +63,7 @@ body :: Parser GitBody
 body =
   skipWhite *> (intern <|> tag <|> line)
  where
-  intern = string "INTERN" >> skipWhile (not . iseol) *> return Intern
+  intern = string "INTERN" >> toEnd *> return Intern
   line   = do
     c  <- satisfy (/= '|')
     cs <- takeWhile (not . iseol)
@@ -69,8 +73,17 @@ body =
 ------------------------------------------------------------------------------
 -- | Try to parse a tag definition of the form 'TAG-123'
 tag :: Parser GitBody
-tag = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal
+tag = Tag <$> (takeWhile (inClass "A-Z") <* char '-') <*> decimal <* end
           <*> return Nothing
+ where
+  end = skipWhile (notInClass bodySep)
+
+
+------------------------------------------------------------------------------
+-- | Skip to the end of line
+toEnd :: Parser ()
+toEnd =
+  skipWhile (not . iseol)
 
 
 ------------------------------------------------------------------------------
