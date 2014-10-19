@@ -154,13 +154,17 @@ options =
     "jira authentication (user:password)"
 
   , Option [] ["debug"]
-    (NoArg (\o -> return o { cDebug = True}))
+    (NoArg (\o -> return o { cDebug = True }))
     "enable debug output"
+
+  , Option "V" ["version"]
+    (NoArg (\_ -> hPutStrLn stderr ("gitlog " ++ getVersion) >> exitSuccess))
+    "show version"
 
   , Option "h" ["help"]
     (NoArg
       (\_ -> do
-        let prg = "gitlog [<from> [<to>]]\n"
+        let prg = "Usage: gitlog [<from> [<to>]]\n"
         hPutStrLn stderr (usageInfo prg options)
         exitSuccess))
     "show this help"

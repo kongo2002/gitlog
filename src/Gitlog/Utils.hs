@@ -1,11 +1,15 @@
 module Gitlog.Utils
   ( split
   , startsWith
+  , getVersion
   , (<>)
   ) where
 
-import Data.Monoid ( Monoid, mappend )
-import Data.List   ( stripPrefix )
+import Data.Monoid  ( Monoid, mappend )
+import Data.List    ( stripPrefix )
+import Data.Version ( showVersion )
+
+import Paths_gitlog ( version )
 
 
 ------------------------------------------------------------------------------
@@ -27,6 +31,14 @@ startsWith prefix input =
   case stripPrefix prefix input of
     (Just _) -> True
     _        -> False
+
+
+------------------------------------------------------------------------------
+-- | Get the string representation of the version stored in
+-- the 'gitlog' cabal file
+getVersion :: String
+getVersion =
+  showVersion version
 
 
 infixr 4 <>
