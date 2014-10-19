@@ -29,8 +29,8 @@ import           Gitlog.Utils
 
 ------------------------------------------------------------------------------
 -- | Shell out git process and parse the results into a list of @GitEntry@
-getGitEntries :: Config -> [String] -> IO (ExitCode, [GitEntry])
-getGitEntries cfg args = do
+getGitEntries :: Config -> IO (ExitCode, [GitEntry])
+getGitEntries cfg = do
   (_, Just out, _, h) <- createProcess prc { cwd = dir
                                            , std_out = CreatePipe }
   -- force evaluation of process output
@@ -41,6 +41,17 @@ getGitEntries cfg args = do
  where
   dir = Just $ cPath cfg
   prc = proc "git" args
+
+  range =
+    case cRange cfg of
+      Nothing       -> []
+      (Just (f, t)) -> [f ++ ".." ++ t]
+
+  args = "--no-pager"
+       : "log"
+       : "--pretty=format:|%h|%an|%ai|%s%n%b"
+       : "--no-merges"
+       : range
 
   intern Intern = True
   intern _      = False
@@ -188,15 +199,10 @@ options =
 main :: IO ()
 main = do
   opts <- parseArgs =<< getArgs
-  (ec, result) <- getGitEntries opts (log' (range $ cRange opts))
+  (ec, result) <- getGitEntries opts
   case ec of
     ExitSuccess -> getOutput opts result >>= BL.putStr
     _           -> exitWith ec
- where
-  log' a = "--no-pager" : "log" : "--pretty=format:|%h|%an|%ai|%s%n%b" : "--no-merges" : a
-
-  range Nothing       = []
-  range (Just (f, t)) = [f ++ ".." ++ t]
 
 
 -- vim: set et sw=2 sts=2 tw=80:
