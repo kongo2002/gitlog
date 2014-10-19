@@ -11,6 +11,8 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Lazy.Builder
 import           Data.Monoid        ( mempty )
 import           Data.Text.Encoding ( encodeUtf8 )
+import           Data.Time.Clock    ( UTCTime(..) )
+import           Data.Time.Calendar ( toGregorian )
 
 import           Gitlog.Types
 import           Gitlog.Utils
@@ -48,8 +50,26 @@ encodeHtml c es =
       (Just (f, t)) ->
         enc "div" "range" (
           s "revisions from " <> commit f <> s " to " <> commit t)
-  date = show $ cDate c
   generated = enc "div" "timestamp" (s "generated on " <> s date)
+  date = simpleDate $ cDate c
+
+
+------------------------------------------------------------------------------
+-- | Poor man's date formatting function
+simpleDate :: UTCTime -> String
+simpleDate (UTCTime date diff) =
+  show y ++ "-" ++ show m ++ "-" ++ show d ++ "T" ++
+  fmt hours ++ ":" ++ fmt minutes ++ ":" ++ fmt seconds
+ where
+  (y, m, d) = toGregorian date
+  total     = floor $ toRational diff
+  hours     = total `div` (3600 :: Int)
+  totalMin  = total `mod` 3600
+  minutes   = totalMin `div` 60
+  seconds   = totalMin `mod` 60
+  fmt x
+    | x < 10    = "0" ++ show x
+    | otherwise = show x
 
 
 ------------------------------------------------------------------------------
