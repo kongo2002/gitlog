@@ -110,8 +110,9 @@ isTag _     = False
 
 ------------------------------------------------------------------------------
 -- | Parse command line arguments
-parseArgs :: [String] -> IO Config
-parseArgs args = do
+parseArgs :: IO Config
+parseArgs = do
+  args <- getArgs
   date <- getCurrentTime
   let (actions, noOpt, _err) = getOpt Permute options args
 
@@ -198,10 +199,10 @@ options =
 -- | Main application entry point
 main :: IO ()
 main = do
-  opts <- parseArgs =<< getArgs
-  (ec, result) <- getGitEntries opts
+  opts     <- parseArgs
+  (ec, xs) <- getGitEntries opts
   case ec of
-    ExitSuccess -> getOutput opts result >>= BL.putStr
+    ExitSuccess -> getOutput opts xs >>= BL.putStr
     _           -> exitWith ec
 
 
