@@ -9,7 +9,6 @@ import           Control.Applicative
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.List          ( groupBy, nub, find, sortBy )
 import           Data.Time.Clock    ( getCurrentTime )
 

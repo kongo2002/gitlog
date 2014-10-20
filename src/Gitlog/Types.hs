@@ -106,6 +106,7 @@ data JiraIssue = JiraIssue
   , jDocumentation :: Bool
   , jPR            :: Bool
   , jStatus        :: JiraStatusCategoryType
+  , jParent        :: Maybe JiraIssue
   } deriving ( Eq, Ord, Show )
 
 
@@ -116,17 +117,20 @@ instance FromJSON JiraIssue where
   parseJSON (Object v) = do
     key <- v .: "key"
     fs  <- v .: "fields"
-    (s, tt, doc, pr, st) <- fields fs
-    return $ JiraIssue key s tt doc pr st
+    (s, tt, doc, pr, st, p) <- fields fs
+    return $ JiraIssue key s tt doc pr st p
    where
     fields (Object x) = do
       s  <- x .: "summary"
       -- "to be tested"
-      tt <- exists =<< (x .: "customfield_10411")
+      tt <- exists =<< (x .:? "customfield_10411" .!= Null)
       -- "documentation relevant" and "PR relevant"
-      cs <- toList =<< (x .: "customfield_10412")
+      cs <- toList =<< (x .:? "customfield_10412" .!= Null)
+      -- issue status
       st <- status =<< x .: "status"
-      return (s, tt, hasField "10123" cs, hasField "10220" cs, st)
+      -- optional issue parent
+      p  <- x .:? "parent"
+      return (s, tt, hasField "10123" cs, hasField "10220" cs, st, p)
     fields _ = mzero
 
     exists Null = return False
@@ -146,7 +150,7 @@ instance FromJSON JiraIssue where
 
 
 instance ToJSON JiraIssue where
-  toJSON (JiraIssue k s tt d pr _) =
+  toJSON (JiraIssue k s tt d pr _ _) =
     object
      [ "key" .= k
      , "summary" .= s
@@ -160,9 +164,9 @@ instance ToJSON JiraIssue where
 -- | Internal structure to hold the JSON information
 -- of a JIRA custom field definition
 data CustomField = CI
-  { cfId    :: Text
-  , cfSelf  :: Text
-  , cfValue :: Text
+  { cfId     :: Text
+  , _cfSelf  :: Text
+  , _cfValue :: Text
   }
 
 
@@ -182,6 +186,7 @@ data JiraStatusCategoryType =
   deriving ( Show, Eq, Ord )
 
 
+idToCategoryType :: Int -> JiraStatusCategoryType
 idToCategoryType 1 = NoCategory
 idToCategoryType 2 = New
 idToCategoryType 3 = Complete
@@ -190,8 +195,8 @@ idToCategoryType _ = NoCategory
 
 
 data JiraStatusCategory = JSC
-  { jscId  :: Int
-  , jscKey :: Text
+  { jscId   :: Int
+  , _jscKey :: Text
   }
 
 

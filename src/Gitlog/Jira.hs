@@ -103,6 +103,7 @@ fetch m cfg (Tag ty no _) =
     , "customfield_10411"
     , "customfield_10412"
     , "status"
+    , "parent"
     ]
 
 fetch _ _ _ = return Nothing
