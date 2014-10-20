@@ -105,6 +105,7 @@ data JiraIssue = JiraIssue
   , jToTest        :: Bool
   , jDocumentation :: Bool
   , jPR            :: Bool
+  , jStatus        :: JiraStatusCategoryType
   } deriving ( Eq, Ord, Show )
 
 
@@ -113,33 +114,39 @@ instance NFData JiraIssue
 
 instance FromJSON JiraIssue where
   parseJSON (Object v) = do
-    key     <- v .: "key"
-    fields  <- v .: "fields"
-    (s, tt, doc, pr) <- summary fields
-    return $ JiraIssue key s tt doc pr
+    key <- v .: "key"
+    fs  <- v .: "fields"
+    (s, tt, doc, pr, st) <- fields fs
+    return $ JiraIssue key s tt doc pr st
    where
-    summary (Object x) = do
+    fields (Object x) = do
       s  <- x .: "summary"
       -- "to be tested"
       tt <- exists =<< (x .: "customfield_10411")
       -- "documentation relevant" and "PR relevant"
       cs <- toList =<< (x .: "customfield_10412")
-      return (s, tt, hasField "10123" cs, hasField "10220" cs)
-    summary _ = mzero
+      st <- status =<< x .: "status"
+      return (s, tt, hasField "10123" cs, hasField "10220" cs, st)
+    fields _ = mzero
 
     exists Null = return False
     exists _    = return True
 
-    hasField i = any ((== i) . _id)
+    hasField i = any ((== i) . cfId)
 
     toList (Array xs) = mapM parseJSON $ V.toList xs
     toList _          = return []
+
+    status (Object s) = do
+      cat <- s .: "statusCategory"
+      return $ idToCategoryType $ jscId cat
+    status _ = mzero
 
   parseJSON _ = mzero
 
 
 instance ToJSON JiraIssue where
-  toJSON (JiraIssue k s tt d pr) =
+  toJSON (JiraIssue k s tt d pr _) =
     object
      [ "key" .= k
      , "summary" .= s
@@ -153,9 +160,9 @@ instance ToJSON JiraIssue where
 -- | Internal structure to hold the JSON information
 -- of a JIRA custom field definition
 data CustomField = CI
-  { _id    :: Text
-  , _self  :: Text
-  , _value :: Text
+  { cfId    :: Text
+  , cfSelf  :: Text
+  , cfValue :: Text
   }
 
 
@@ -164,6 +171,33 @@ instance FromJSON CustomField where
     CI <$> o .: "id"
        <*> o .: "self"
        <*> o .: "value"
+  parseJSON _ = mzero
+
+
+data JiraStatusCategoryType =
+    NoCategory
+  | New
+  | Complete
+  | InProgress
+  deriving ( Show, Eq, Ord )
+
+
+idToCategoryType 1 = NoCategory
+idToCategoryType 2 = New
+idToCategoryType 3 = Complete
+idToCategoryType 4 = InProgress
+idToCategoryType _ = NoCategory
+
+
+data JiraStatusCategory = JSC
+  { jscId  :: Int
+  , jscKey :: Text
+  }
+
+
+instance FromJSON JiraStatusCategory where
+  parseJSON (Object x) =
+    JSC <$> x .: "id" <*> x .: "key"
   parseJSON _ = mzero
 
 

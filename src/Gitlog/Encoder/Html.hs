@@ -117,7 +117,7 @@ entry c e =
 
   jiraInfo j =
     case j of
-      (Just (JiraIssue _ sm test doc pr)) ->
+      (Just (JiraIssue _ sm test doc pr _)) ->
         charUtf8 ' ' <>
         enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 sm) <> charUtf8 ')') <>
         when "relevant test" (s "to be tested") test <>

@@ -73,11 +73,9 @@ getGitEntries cfg = do
 -- | Convert the given list of @GitEntry@ into a lazy bytestring output
 getOutput :: Config -> [GitEntry] -> IO BL.ByteString
 getOutput cfg entries
-  | debug       = return $ LBS.pack $ show entries
   | hasJira cfg = encode cfg . groupIssues <$> getJira cfg entries
   | otherwise   = return $ encode cfg entries
  where
-  debug = cDebug cfg
   tags a b =
     case (firstTag a, firstTag b) of
       (Just t1, Just t2) -> compare t2 t1

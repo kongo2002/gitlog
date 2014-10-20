@@ -5,21 +5,21 @@ module Gitlog.Jira
   ) where
 
 import           Control.Applicative
-import           Control.Exception ( catch, SomeException(..) )
+import           Control.Exception      ( catch, SomeException(..) )
 import           Control.Monad.Par.IO
 import           Control.Monad.Par.Class
 import           Control.Monad.IO.Class ( liftIO )
 
-import           Data.Aeson        ( decode )
+import           Data.Aeson             ( decode )
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as BS
-import           Data.List         ( intercalate, nub )
+import           Data.List              ( intercalate, nub )
 import qualified Data.Map.Strict as M
-import           Data.Maybe        ( mapMaybe )
+import           Data.Maybe             ( mapMaybe )
 
 import           Network.HTTP.Conduit
 
-import           System.IO         ( hPrint, stderr )
+import           System.IO              ( hPrint, stderr )
 
 import           Gitlog.Types
 
@@ -30,8 +30,12 @@ getJira :: Config -> [GitEntry] -> IO [GitEntry]
 getJira cfg es = do
   issueMap <- M.fromList . mapMaybe issuesOnly <$> getJiraInfo cfg issues
 
-  return $ map (getIssues issueMap) es
+  dPrint $ map (getIssues issueMap) es
  where
+  dPrint x
+    | cDebug cfg = hPrint stderr x >> return x
+    | otherwise  = return x
+
   issues =
     nub $ foldr tag [] $ concatMap gBody es
    where
@@ -88,9 +92,8 @@ safeFetch m cfg tag =
 ------------------------------------------------------------------------------
 -- | Fetch the desired information of the JIRA API
 fetch :: Manager -> Config -> GitBody -> IO (Maybe JiraIssue)
-fetch m cfg (Tag ty no _) = do
-  out <- httpTimeout cfg m url
-  return $ decode out
+fetch m cfg (Tag ty no _) =
+  decode <$> httpTimeout cfg m url
  where
   tag  = BS.unpack ty ++ "-" ++ show no
   base = cJira cfg
@@ -99,6 +102,7 @@ fetch m cfg (Tag ty no _) = do
     [ "summary"
     , "customfield_10411"
     , "customfield_10412"
+    , "status"
     ]
 
 fetch _ _ _ = return Nothing
