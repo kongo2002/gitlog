@@ -86,7 +86,7 @@ entry c e =
         byteString $ gDate e)
       ) <>
     enc "div" "title" (
-      byteString $ gTitle e
+      simpleEscape $ gTitle e
       ) <>
     enc "div" "tags" (tags body) <>
     lines body)
@@ -98,7 +98,7 @@ entry c e =
   lines [] = mempty
   lines ls = enc "div" "body" (foldr lines' mempty ls)
 
-  lines' (Line l) a = enc "div" "line" (byteString l) <> a
+  lines' (Line l) a = enc "div" "line" (simpleEscape l) <> a
   lines' _        a = a
 
   tags [] = mempty
@@ -119,7 +119,7 @@ entry c e =
     case j of
       (Just (JiraIssue _ sm test doc pr _ _)) ->
         charUtf8 ' ' <>
-        enc "span" "jira" (charUtf8 '(' <> byteString (encodeUtf8 sm) <> charUtf8 ')') <>
+        enc "span" "jira" (charUtf8 '(' <> simpleEscape (encodeUtf8 sm) <> charUtf8 ')') <>
         when "relevant test" (s "to be tested") test <>
         when "relevant doc" (s "relevant to documentation") doc <>
         when "relevant pr" (s "relevant to PR") pr
@@ -185,6 +185,21 @@ css =
 -- | HTML footer
 footer :: Builder
 footer = s "</body></html>"
+
+
+------------------------------------------------------------------------------
+-- | Simple HTML string escaping
+simpleEscape :: BS.ByteString -> Builder
+simpleEscape str =
+  go mempty (BS.uncons str)
+ where
+  go b Nothing = b
+  go b (Just (h, t)) =
+    case h of
+      '&' -> go (b <> "&amp;") (BS.uncons t)
+      '<' -> go (b <> "&lt;") (BS.uncons t)
+      '>' -> go (b <> "&gt;") (BS.uncons t)
+      _   -> go (b <> charUtf8 h) (BS.uncons t)
 
 
 s :: String -> Builder
