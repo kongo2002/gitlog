@@ -1,5 +1,5 @@
 name:                gitlog
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Git log parser
 -- description:
 homepage:            https://github.com/kongo2002/gitlog
