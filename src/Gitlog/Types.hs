@@ -141,10 +141,8 @@ instance FromJSON JiraIssue where
     toList (Array xs) = mapM parseJSON $ V.toList xs
     toList _          = return []
 
-    status (Object s) = do
-      cat <- s .: "statusCategory"
-      return $ idToCategoryType $ jscId cat
-    status _ = mzero
+    status (Object s) = (idToType . jscId) <$> s .: "statusCategory"
+    status _          = mzero
 
   parseJSON _ = mzero
 
@@ -186,12 +184,12 @@ data JiraStatusCategoryType =
   deriving ( Show, Eq, Ord )
 
 
-idToCategoryType :: Int -> JiraStatusCategoryType
-idToCategoryType 1 = NoCategory
-idToCategoryType 2 = New
-idToCategoryType 3 = Complete
-idToCategoryType 4 = InProgress
-idToCategoryType _ = NoCategory
+idToType :: Int -> JiraStatusCategoryType
+idToType 1 = NoCategory
+idToType 2 = New
+idToType 3 = Complete
+idToType 4 = InProgress
+idToType _ = NoCategory
 
 
 data JiraStatusCategory = JSC
