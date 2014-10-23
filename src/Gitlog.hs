@@ -55,7 +55,7 @@ getGitEntries cfg = do
   intern Intern = True
   intern _      = False
 
-  relevant e = noIntern e && noRevert e
+  relevant = noIntern .&&. noRevert
 
   noIntern e = not $ any intern $ gBody e
   noRevert e =

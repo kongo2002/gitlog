@@ -28,6 +28,7 @@ import           Gitlog.Types
 -- | Retrieve all JIRA information for the given list of @GitEntry@
 getJira :: Config -> [GitEntry] -> IO [GitEntry]
 getJira cfg es = do
+  -- build a map of all fetched JIRA issues
   issueMap <- M.fromList . mapMaybe issuesOnly <$> getJiraInfo cfg issues
 
   dPrint $ map (getIssues issueMap) es

@@ -2,6 +2,7 @@ module Gitlog.Utils
   ( split
   , startsWith
   , getVersion
+  , (.&&.)
   , (<>)
   ) where
 
@@ -39,6 +40,12 @@ startsWith prefix input =
 getVersion :: String
 getVersion =
   showVersion version
+
+
+------------------------------------------------------------------------------
+-- | Minor helper function to combine to filter functions
+(.&&.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(.&&.) a b x = a x && b x
 
 
 infixr 4 <>

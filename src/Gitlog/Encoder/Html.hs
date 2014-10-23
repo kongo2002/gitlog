@@ -86,7 +86,7 @@ entry c e =
         byteString $ gDate e)
       ) <>
     enc "div" "title" (
-      simpleEscape $ gTitle e
+      escape $ gTitle e
       ) <>
     enc "div" "tags" (tags body) <>
     lines body)
@@ -98,35 +98,55 @@ entry c e =
   lines [] = mempty
   lines ls = enc "div" "body" (foldr lines' mempty ls)
 
-  lines' (Line l) a = enc "div" "line" (simpleEscape l) <> a
+  lines' (Line l) a = enc "div" "line" (escape l) <> a
   lines' _        a = a
 
   tags [] = mempty
   tags ts = enc "ul" "tags" $ foldr tags' mempty ts
 
-  tags' t@(Tag{}) a = enc "li" "tag" (fmt t) <> a
+  tags' t@(Tag{}) a = enc "li" "tag" (jirafmt t) <> a
   tags' _          a = a
 
-  fmt (Tag t no ji)
-    | hasUrl =
-      let tag = BS.unpack t ++ "-" ++ show no
-          url = jira ++ "/browse/" ++ tag
-      in enc' "href" "a" url (s tag) <> jiraInfo ji
-    | otherwise = byteString t <> charUtf8 '-' <> s (show no)
-  fmt _ = mempty
+  jirafmt (Tag t no ji) =
+    jiraurl (maybe
+      (t `BS.append` "-" `BS.append` BS.pack (show no))
+      (encodeUtf8 . jKey)
+      ji)
+    <> maybe mempty jirainfo ji
+  jirafmt _ = mempty
 
-  jiraInfo j =
-    case j of
-      (Just (JiraIssue _ sm test doc pr _ _)) ->
-        charUtf8 ' ' <>
-        enc "span" "jira" (charUtf8 '(' <> simpleEscape (encodeUtf8 sm) <> charUtf8 ')') <>
-        when "relevant test" (s "to be tested") test <>
-        when "relevant doc" (s "relevant to documentation") doc <>
-        when "relevant pr" (s "relevant to PR") pr
-       where
-        when t name cond =
-          if cond then enc "div" t name else mempty
-      Nothing -> mempty
+  jiraurl tag
+    | hasUrl =
+      let tag' = BS.unpack tag
+      in  enc' "href" "a" (jira ++ "/browse/" ++ tag') (s tag')
+    | otherwise = byteString tag
+
+  jirainfo (JiraIssue _ sm test doc pr st p) =
+    charUtf8 ' ' <>
+    enc "span" "jira" (
+      enc "span" "status" (charUtf8 '(' <> status <> charUtf8 ')') <>
+      s ": " <>
+      enc "span" "summary" (esc sm)) <>
+    maybe mempty parent p <>
+    when "relevant test" (s "to be tested") test <>
+    when "relevant doc" (s "relevant to documentation") doc <>
+    when "relevant pr" (s "relevant to PR") pr
+   where
+    esc         = escape . encodeUtf8
+    status      = s $ show st
+    when t n cd =
+      if cd then enc "div" t n else mempty
+
+    parent issue =
+      enc "div" "parent" (
+        s "Parent issue:" <>
+        enc "div" [] (
+          jiraurl (encodeUtf8 key) <> s " (" <> s pStat <> s "): " <>
+          esc summary))
+     where
+      key     = jKey issue
+      summary = jSummary issue
+      pStat   = show $ jStatus issue
 
 
 ------------------------------------------------------------------------------
@@ -139,11 +159,15 @@ enc = enc' "class"
 -- | Enclosing tag helper function
 enc' :: String -> String -> String -> Builder -> Builder
 enc' attr tag v builder =
-  charUtf8 '<' <> tag' <> charUtf8 ' ' <> s attr <> s "=\"" <> s v <> s "\">" <>
+  charUtf8 '<' <> tag' <> attr' <> charUtf8 '>' <>
   builder <>
   s "</" <> tag' <> charUtf8 '>'
  where
   tag' = s tag
+  attr' =
+    case v of
+      [] -> mempty
+      _  -> charUtf8 ' ' <> s attr <> s "=\"" <> s v <> charUtf8 '"'
 
 
 ------------------------------------------------------------------------------
@@ -178,6 +202,7 @@ css =
       \ div.tags{padding:0.6em 0;}\
       \ ul.tags{margin:0;}\
       \ a{text-decoration:none;color:#66d;}\
+      \.parent{margin:0.5em;font-size:85%;}\
     \</style>"
 
 
@@ -189,8 +214,8 @@ footer = s "</body></html>"
 
 ------------------------------------------------------------------------------
 -- | Simple HTML string escaping
-simpleEscape :: BS.ByteString -> Builder
-simpleEscape str =
+escape :: BS.ByteString -> Builder
+escape str =
   go mempty (BS.uncons str)
  where
   go b Nothing = b
