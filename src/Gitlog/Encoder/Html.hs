@@ -216,15 +216,17 @@ footer = s "</body></html>"
 -- | Simple HTML string escaping
 escape :: BS.ByteString -> Builder
 escape str =
-  go mempty (BS.uncons str)
+  case BS.uncons t of
+    Nothing      -> byteString h
+    Just (c, cs) -> byteString h <> escape' c <> escape cs
  where
-  go b Nothing = b
-  go b (Just (h, t)) =
-    case h of
-      '&' -> go (b <> "&amp;") (BS.uncons t)
-      '<' -> go (b <> "&lt;") (BS.uncons t)
-      '>' -> go (b <> "&gt;") (BS.uncons t)
-      _   -> go (b <> charUtf8 h) (BS.uncons t)
+  splitby x = x `elem` "&<>"
+  (h, t)    = BS.break splitby str
+
+  escape' '&' = s "&amp;"
+  escape' '<' = s "&lt;"
+  escape' '>' = s "&gt;"
+  escape' c   = charUtf8 c
 
 
 s :: String -> Builder
