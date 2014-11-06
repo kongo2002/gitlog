@@ -58,7 +58,7 @@ encodeHtml c es =
 -- | Poor man's date formatting function
 simpleDate :: UTCTime -> String
 simpleDate (UTCTime date diff) =
-  show y ++ "-" ++ show m ++ "-" ++ show d ++ " " ++
+  show y ++ "-" ++ fmt m ++ "-" ++ fmt d ++ " " ++
   fmt hours ++ ":" ++ fmt minutes ++ ":" ++ fmt seconds ++ " UTC"
  where
   (y, m, d) = toGregorian date
