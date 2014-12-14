@@ -1,6 +1,7 @@
 module Gitlog.Utils
   ( split
   , startsWith
+  , getName
   , getVersion
   , (.&&.)
   , (<>)
@@ -32,6 +33,13 @@ startsWith prefix input =
   case stripPrefix prefix input of
     (Just _) -> True
     _        -> False
+
+
+------------------------------------------------------------------------------
+-- | Get the program name with its version string
+getName :: String
+getName =
+  "gitlog " ++ getVersion
 
 
 ------------------------------------------------------------------------------

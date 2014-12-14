@@ -169,7 +169,7 @@ options =
     "enable debug output"
 
   , Option "V" ["version"]
-    (NoArg (\_ -> hPutStrLn stderr ("gitlog " ++ getVersion) >> exitSuccess))
+    (NoArg (\_ -> hPutStrLn stderr getName >> exitSuccess))
     "show version"
 
   , Option "h" ["help"]
