@@ -91,8 +91,10 @@ getOutput cfg entries
     a_tags   = onlyTags $ gBody a
     b_tags   = onlyTags $ gBody b
 
+  -- group by JIRA issues
   groupIssues = map select . groupBy sameJira . sortBy tags
    where
+    -- combine the bodies of all grouped entries
     select []           = error "captain! we've been hit"
     select [x]          = x
     select xs@(first:_) =

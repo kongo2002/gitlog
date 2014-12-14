@@ -13,9 +13,10 @@ import           Control.Monad.IO.Class ( liftIO )
 import           Data.Aeson             ( decode )
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as BS
-import           Data.List              ( intercalate, nub )
+import           Data.List              ( intercalate, nub, find )
 import qualified Data.Map.Strict as M
 import           Data.Maybe             ( mapMaybe )
+import           Data.Text.Encoding     ( encodeUtf8 )
 
 import           Network.HTTP.Conduit
 
@@ -48,9 +49,20 @@ getJira cfg es = do
 
   getIssues m entry
     | null body = entry
-    | otherwise = entry { gBody = map (getIssue m) body }
+    | otherwise = entry { gBody = body', gTitle = title }
    where
     body = gBody entry
+    body' = map (getIssue m) body
+
+    -- replace title with the summary of the first
+    -- JIRA issue if available
+    title = case issue of
+      (Just (Tag _ _ (Just i))) -> encodeUtf8 $ jSummary i
+      _                         -> gTitle entry
+
+    issue = find isIssue body'
+    isIssue (Tag _ _ (Just _)) = True
+    isIssue _                  = False
 
   getIssue m tag@(Tag t no _) = Tag t no (M.lookup tag m)
   getIssue _ x                = x
