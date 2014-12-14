@@ -1,5 +1,5 @@
 name:                gitlog
-version:             0.1.0.1
+version:             0.1.0.2
 synopsis:            Git log parser
 homepage:            https://github.com/kongo2002/gitlog
 license:             Apache-2.0
